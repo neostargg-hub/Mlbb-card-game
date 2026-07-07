@@ -8,7 +8,7 @@ GAME_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MLBB: Хроники Монии — Приключение v5.0</title>
+    <title>MLBB: Хроники Монии — Горизонты v6.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; }
@@ -23,41 +23,41 @@ GAME_HTML = """
         }
         
         #game-container {
-            width: 100%; max-width: 460px; height: 100%; max-height: 760px;
+            width: 100%; max-width: 440px; height: 100%; max-height: 740px;
             display: flex; flex-direction: column; justify-content: space-between;
             background: linear-gradient(135deg, #0f0f20 0%, #030307 100%);
             border: 4px solid #555577; box-shadow: 0 0 35px rgba(0,0,0,0.9);
-            padding: 8px; position: relative;
+            padding: 8px; position: relative; transition: all 0.3s ease;
         }
         #game-container.fullscreen { max-width: 100vw; max-height: 100vh; border: none; padding: 10px; }
         
-        h1 { font-size: 10px; color: #ffff55; text-shadow: 2px 2px #000; margin: 3px 0; text-transform: uppercase; letter-spacing: 1px; }
-        .subtitle { font-size: 6px; color: #8a8ab0; margin-bottom: 4px; text-transform: uppercase; }
+        /* ГИБКАЯ АДАПТАЦИЯ ПОД ГОРИЗОНТАЛЬНЫЙ ЭКРАН */
         .screen { display: none; height: 100%; flex-direction: column; justify-content: space-between; }
         .screen.active { display: flex; }
-        .panel { background-color: #0b0b14; border: 2px solid #3d3d5c; box-shadow: 3px 3px 0px #000; padding: 6px; margin-bottom: 5px; position: relative; }
+        .col-left, .col-right { width: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+        
+        @media (orientation: landscape) and (min-width: 550px) {
+            #game-container { max-width: 820px; max-height: 420px; flex-direction: row; padding: 10px; }
+            .screen { flex-direction: row !important; width: 100%; gap: 12px; }
+            .col-left { width: 50%; height: 100%; justify-content: space-between; }
+            .col-right { width: 48%; height: 100%; justify-content: cubic-bezier(0,1,1,1); }
+        }
+
+        h1 { font-size: 9px; color: #ffff55; text-shadow: 2px 2px #000; margin: 3px 0; text-transform: uppercase; letter-spacing: 1px; }
+        .subtitle { font-size: 6px; color: #8a8ab0; margin-bottom: 4px; text-transform: uppercase; }
+        .panel { background-color: #0b0b14; border: 2px solid #3d3d5c; box-shadow: 3px 3px 0px #000; padding: 6px; margin-bottom: 4px; position: relative; }
         
         /* ДВИЖОК КАРТЫ */
         #map-grid {
-            display: grid;
-            grid-template-columns: repeat(9, 1fr);
-            gap: 2px;
-            background: #05050a;
-            padding: 4px;
-            border: 3px solid #444466;
-            margin: 4px auto;
-            width: 100%;
-            max-width: 330px;
+            display: grid; grid-template-columns: repeat(9, 1fr); gap: 2px;
+            background: #05050a; padding: 4px; border: 3px solid #444466; margin: 2px auto;
+            width: 100%; max-width: 290px;
         }
+        @media (orientation: landscape) { #map-grid { max-width: 240px; } }
+
         .map-tile {
-            aspect-ratio: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            background: #122212;
-            border-radius: 2px;
-            text-shadow: 1px 1px 0 #000;
+            aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+            font-size: 12px; background: #122212; border-radius: 2px; text-shadow: 1px 1px 0 #000;
         }
         .tile-wall { background: #22222b; }
         .tile-floor { background: #142414; }
@@ -65,29 +65,33 @@ GAME_HTML = """
         .tile-waste { background: #332015; }
         .tile-abyss { background: #2b0a0a; }
 
-        /* D-Pad */
-        .dpad-container { display: grid; grid-template-columns: repeat(3, 1fr); width: 110px; margin: 4px auto; gap: 4px; }
-        .dpad-btn { font-family: 'Press Start 2P'; font-size: 11px; background: #22223b; color: #fff; border: 2px outset #444477; padding: 9px 0; cursor: pointer; border-radius: 4px; }
-        .dpad-btn:active { border-style: inset; background: #111122; }
+        /* УВЕЛИЧЕННЫЙ И КОМПАКТНЫЙ D-PAD */
+        .dpad-container { display: grid; grid-template-columns: repeat(3, 1fr); width: 135px; margin: 4px auto; gap: 5px; }
+        .dpad-btn { font-family: 'Press Start 2P'; font-size: 14px; background: #252542; color: #fff; border: 2px outset #555588; padding: 11px 0; cursor: pointer; border-radius: 6px; }
+        .dpad-btn:active { border-style: inset; background: #15152b; color: #ffea00; }
 
         /* Прогресс-бары */
-        .bar-container { width: 100%; height: 12px; background-color: #111; border: 2px solid #fff; margin-top: 2px; position: relative; }
+        .bar-container { width: 100%; height: 11px; background-color: #111; border: 2px solid #fff; margin-top: 2px; position: relative; }
         .hp-fill { height: 100%; background-color: #cc2222; width: 100%; transition: width 0.15s; }
         .mana-fill { height: 100%; background-color: #1f75fe; width: 100%; transition: width 0.15s; }
         .shield-fill { height: 100%; background-color: #777788; width: 0%; transition: width 0.15s; }
         .exp-fill { height: 100%; background-color: #aa22cc; width: 0%; }
 
-        #log { height: 55px; overflow-y: auto; background: #010103; color: #4aff4a; padding: 5px; text-align: left; border: 2px solid #3d3d5c; font-size: 6px; line-height: 1.4; }
+        #log { height: 50px; overflow-y: auto; background: #010103; color: #4aff4a; padding: 4px; text-align: left; border: 2px solid #3d3d5c; font-size: 6px; line-height: 1.4; }
+        @media (orientation: landscape) { #log { height: 65px; } }
         
         .grid-2 { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
-        .menu-btn { font-family: 'Press Start 2P', cursive; background-color: #1f1f3a; color: #d4af37; border: 3px outset #444477; padding: 9px; width: 95%; margin: 4px auto; display: block; font-size: 7px; cursor: pointer; }
-        .card-btn { font-family: 'Press Start 2P', cursive; background-color: #131324; color: #fff; border: 2px outset #3d3d5c; padding: 6px 2px; font-size: 6px; cursor: pointer; width: 48%; min-height: 32px; margin-bottom: 2px; }
-        .card-btn:disabled { opacity: 0.25; cursor: not-allowed; }
-        .attack { color: #ff5555; } .defend { color: #55aaff; } .ultimate { color: #ffff55; border-color: #ffff55; }
+        .menu-btn { font-family: 'Press Start 2P', cursive; background-color: #1f1f3a; color: #d4af37; border: 3px outset #444477; padding: 10px; width: 95%; margin: 4px auto; display: block; font-size: 8px; cursor: pointer; border-radius: 4px; }
+        
+        /* УВЕЛИЧЕННЫЕ БОЕВЫЕ КНОПКИ */
+        .cards { display: flex; flex-wrap: wrap; gap: 4px; justify-content: space-between; }
+        .card-btn { font-family: 'Press Start 2P', cursive; background-color: #131324; color: #fff; border: 2px outset #3d3d5c; padding: 8px 2px; font-size: 7px; cursor: pointer; width: 49%; min-height: 38px; border-radius: 4px; }
+        .card-btn:disabled { opacity: 0.20; cursor: not-allowed; border-color: #222; }
+        .attack { color: #ff6666; border-color: #aa4444; } .defend { color: #66b2ff; border-color: #4477aa; } .ultimate { color: #ffff55; border-color: #ffff55; font-weight: bold; }
 
         /* Боевой экран */
-        .stage-container { position: relative; height: 85px; overflow: hidden; background: #020207; border: 2px solid #333; margin-top: 3px; }
-        .sprite { font-size: 38px; position: absolute; bottom: 4px; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; }
+        .stage-container { position: relative; height: 80px; overflow: hidden; background: #020207; border: 2px solid #333; margin-top: 2px; }
+        .sprite { font-size: 34px; position: absolute; bottom: 4px; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; }
         #hero-sprite { left: 15%; transform: scaleX(-1); }
         #enemy-sprite { right: 15%; }
         
@@ -95,19 +99,19 @@ GAME_HTML = """
         .strike-left { animation: strikeL 0.3s ease-in-out; }
         .strike-right { animation: strikeR 0.3s ease-in-out; }
         .flash-red { animation: flashR 0.2s ease-in-out; }
-        @keyframes floatEff { 0%, 100% { bottom: 4px; } 50% { bottom: 12px; } }
+        @keyframes floatEff { 0%, 100% { bottom: 4px; } 50% { bottom: 10px; } }
         @keyframes strikeL { 0% { left: 15%; } 50% { left: 45%; transform: scaleX(-1) scale(1.2); } 100% { left: 15%; } }
         @keyframes strikeR { 0% { right: 15%; } 50% { right: 45%; transform: scale(1.2); } 100% { right: 15%; } }
-        @keyframes flashR { 0%, 100% { background: #020207; } 50% { background: #500; } }
+        @keyframes flashR { 0%, 100% { background: #020207; } 50% { background: #400; } }
 
-        .damage-pop { position: absolute; font-size: 8px; font-weight: bold; color: #ff3333; text-shadow: 1.5px 1.5px #000; animation: pUp 0.6s forwards ease-out; z-index: 10; }
+        .damage-pop { position: absolute; font-size: 9px; font-weight: bold; color: #ff3333; text-shadow: 1.5px 1.5px #000; animation: pUp 0.6s forwards ease-out; z-index: 10; }
         @keyframes pUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-25px) scale(1.2); } }
 
         .inv-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 4px 0; }
-        .inv-slot { background: #04040a; border: 2px solid #333; height: 34px; display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer; }
+        .inv-slot { background: #04040a; border: 2px solid #333; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; border-radius: 4px; }
         .common { border-color: #888; } .epic { border-color: #22aaff; } .legend { border-color: #ffaa00; text-shadow: 0 0 4px #ffaa00; }
         .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 7px; border-bottom: 1px solid #222; }
-        .btn-small { padding: 4px 7px; font-family: 'Press Start 2P'; font-size: 5px; background: #3d3d5c; color: #fff; border: 2px outset #555; cursor: pointer; }
+        .btn-small { padding: 5px 8px; font-family: 'Press Start 2P'; font-size: 6px; background: #3d3d5c; color: #fff; border: 2px outset #555; cursor: pointer; border-radius: 3px; }
     </style>
 </head>
 <body>
@@ -116,129 +120,142 @@ GAME_HTML = """
 
         <!-- ЭКРАН 1: ГЛАВНОЕ МЕНЮ -->
         <div id="screen-menu" class="screen active">
-            <h1 style="font-size: 11px; color: #ffff55; margin-top: 25px;">MLBB RPG:<br>ОДИССЕЯ МОНИИ</h1>
-            <p class="subtitle">Версия 5.0 (Сундуки и Классы)</p>
-            <div style="font-size: 38px; margin: 25px 0; animation: floatEff 2s infinite ease-in-out; height: 45px;">🏃‍♂️🎁👹</div>
-            <button class="menu-btn" onclick="startAdventure()">НАЧАТЬ ПУТЕШЕСТВИЕ</button>
-            <button class="menu-btn" onclick="switchScreen('screen-settings')">НАСТРОЙКИ И КЛАССЫ</button>
+            <div class="col-left" style="justify-content: center;">
+                <h1 style="font-size: 12px; color: #ffff55; line-height: 1.3;">MLBB RPG:<br>ОДИССЕЯ МОНИИ</h1>
+                <p class="subtitle">Версия 6.0 (Ландшафтный UI)</p>
+            </div>
+            <div class="col-right" style="justify-content: center;">
+                <div style="font-size: 34px; margin: 15px 0; animation: floatEff 2s infinite ease-in-out;">🏃‍♂️🎁👹</div>
+                <button class="menu-btn" onclick="startAdventure()">НАЧАТЬ ПУТЕШЕСТВИЕ</button>
+                <button class="menu-btn" onclick="switchScreen('screen-settings')">НАСТРОЙКИ И КЛАССЫ</button>
+            </div>
         </div>
 
         <!-- ЭКРАН 2: НАСТРОЙКИ -->
         <div id="screen-settings" class="screen">
-            <h1>НАСТРОЙКИ СИСТЕМЫ</h1>
-            <div class="panel" style="text-align: left;">
-                <div class="setting-row"><span>ВЫБОР КЛАССА:</span> <button id="cfg-hero" class="btn-small" style="color:#ffaa00;" onclick="toggleSetting('hero')">АЛУКАРД</button></div>
-                <div class="setting-row"><span>РАЗМЕР ЭКРАНА:</span> <button id="cfg-screen" class="btn-small" onclick="toggleSetting('screen')">ОКНО</button></div>
-                <div class="setting-row"><span>ЗВУКИ (СИНТ):</span> <button id="cfg-sound" class="btn-small" onclick="toggleSetting('sound')">ВКЛ</button></div>
-                <div class="setting-row"><span>МУЗЫКА ТАЙЛОВ:</span> <button id="cfg-music" class="btn-small" onclick="toggleSetting('music')">ВКЛ</button></div>
+            <div class="col-left">
+                <h1>НАСТРОЙКИ СИСТЕМЫ</h1>
+                <div class="panel" style="text-align: left; margin: 0;">
+                    <div class="setting-row"><span>ВЫБОР КЛАССА:</span> <button id="cfg-hero" class="btn-small" style="color:#ffaa00;" onclick="toggleSetting('hero')">АЛУКАРД</button></div>
+                    <div class="setting-row"><span>РАЗМЕР ЭКРАНА:</span> <button id="cfg-screen" class="btn-small" onclick="toggleSetting('screen')">ОКНО</button></div>
+                    <div class="setting-row"><span>ЗВУКИ (СИНТ):</span> <button id="cfg-sound" class="btn-small" onclick="toggleSetting('sound')">ВКЛ</button></div>
+                    <div class="setting-row"><span>МУЗЫКА ТАЙЛОВ:</span> <button id="cfg-music" class="btn-small" onclick="toggleSetting('music')">ВКЛ</button></div>
+                </div>
             </div>
-            <div class="panel" style="font-size:5px; text-align:left; color:#aaa; line-height:1.4;">
-                * АЛУКАРД: Много ОЗ, восстанавливает здоровье при простых атаках (Вампиризм).<br><br>
-                * МИЯ: Чуть меньше ОЗ, но обладает шансом на Критический урон (x2) стрелой.
+            <div class="col-right">
+                <div class="panel" style="font-size:5px; text-align:left; color:#aaa; line-height:1.5; margin-top: 5px;">
+                    * АЛУКАРД: Вампиризм (восстановление ОЗ при обычных атаках ближнего боя).<br><br>
+                    * МИЯ: Стрелок. Имеет шанс нанести двойной Критический урон (x2) стрелой.
+                </div>
+                <button class="menu-btn" onclick="switchScreen('screen-menu')">СОХРАНИТЬ И ВЕРНУТЬСЯ</button>
             </div>
-            <button class="menu-btn" onclick="switchScreen('screen-menu')">СОХРАНИТЬ И ВЕРНУТЬСЯ</button>
         </div>
 
         <!-- ЭКРАН 3: КАРТА ИССЛЕДОВАНИЯ -->
         <div id="screen-adventure" class="screen">
-            <div>
-                <h1 id="adv-location-title">ЛОКАЦИЯ 1</h1>
-                <div style="display:flex; justify-content:space-between; font-size:6px; padding: 2px 5px;">
-                    <span>❤️ ОЗ: <span id="adv-hp">100/100</span></span>
-                    <span>💰 ЗОЛОТО: <span id="adv-gold" style="color:#ffff55;">0</span></span>
-                    <span>⭐ УРОВЕНЬ: <span id="adv-lvl">1</span></span>
+            <div class="col-left">
+                <div>
+                    <h1 id="adv-location-title">ЛОКАЦИЯ 1</h1>
+                    <div style="display:flex; justify-content:space-between; font-size:6px; padding: 2px 3px; background: #000; border: 1px solid #222;">
+                        <span>❤️ ОЗ: <span id="adv-hp" style="color:#ff5555;">100/100</span></span>
+                        <span>💰 ЗОЛОТО: <span id="adv-gold" style="color:#ffff55;">0</span></span>
+                        <span>⭐ УР: <span id="adv-lvl">1</span></span>
+                    </div>
                 </div>
+                <!-- Сетка карты -->
+                <div id="map-grid"></div>
             </div>
 
-            <!-- Сетка карты -->
-            <div id="map-grid"></div>
-
-            <div style="font-size:5px; color:#8a8ab0; margin-bottom:2px;">
-                Легенда: 👾-Крип | 🎁-Сундук | ⛲-Фонтан | 🎯-Портал
-            </div>
-
-            <!-- D-Pad -->
-            <div>
-                <div class="dpad-container">
-                    <div></div>
-                    <button class="dpad-btn" onclick="movePlayer(0, -1)">▲</button>
-                    <div></div>
-                    <button class="dpad-btn" onclick="movePlayer(-1, 0)">◄</button>
-                    <button class="dpad-btn" style="background:#444466; font-size:7px; color:#ffff55;" onclick="openCampHub()">🎒</button>
-                    <button class="dpad-btn" onclick="movePlayer(1, 0)">►</button>
-                    <div></div>
-                    <button class="dpad-btn" onclick="movePlayer(0, 1)">▼</button>
-                    <div></div>
+            <div class="col-right">
+                <div style="font-size:5px; color:#8a8ab0; margin: 2px 0;">
+                    Легенда: 👾-Крип | 🎁-Сундук | ⛲-Фонтан | 🎯-Портал
                 </div>
+                <!-- Большой D-Pad -->
+                <div>
+                    <div class="dpad-container">
+                        <div></div>
+                        <button class="dpad-btn" onclick="movePlayer(0, -1)">▲</button>
+                        <div></div>
+                        <button class="dpad-btn" onclick="movePlayer(-1, 0)">◄</button>
+                        <button class="dpad-btn" style="background:#444466; font-size:10px; color:#ffff55;" onclick="openCampHub()">🎒</button>
+                        <button class="dpad-btn" onclick="movePlayer(1, 0)">►</button>
+                        <div></div>
+                        <button class="dpad-btn" onclick="movePlayer(0, 1)">▼</button>
+                        <div></div>
+                    </div>
+                </div>
+                <button class="menu-btn" style="background:#222; margin-top:2px; padding:6px;" onclick="switchScreen('screen-menu')">ПОКИНУТЬ МИР</button>
             </div>
-
-            <button class="menu-btn" style="background:#222; margin-top:2px;" onclick="switchScreen('screen-menu')">ПОКИНУТЬ МИР</button>
         </div>
 
         <!-- ЭКРАН 4: ЛАГЕРЬ И КУЗНИЦА -->
         <div id="screen-camp" class="screen">
-            <h1 style="color:#55ff55;">СНАРЯЖЕНИЕ И ЛАГЕРЬ</h1>
-            <div class="panel" style="text-align: left; font-size: 6px; line-height: 1.5;">
-                <div>КЛАСС: <span id="camp-hero" style="color:#6da5ff;">АЛУКАРД</span> (УРОВЕНЬ <span id="camp-lvl">1</span>)</div>
-                <div>ОБЩИЙ УРОН: <span id="camp-dmg" style="color:#ff5555;">16</span></div>
-                <div style="margin-top:3px;">ОПЫТ ДО СЛЕДУЮЩЕГО УРОВНЯ:</div>
-                <div class="bar-container" style="height:6px;"><div id="camp-exp-fill" class="exp-fill"></div></div>
-            </div>
-
-            <div class="panel">
-                <div style="font-size: 6px; text-align: left; margin-bottom: 3px; color:#aaa;">НАДЕТЫЕ ПРЕДМЕТЫ:</div>
-                <div style="display:flex; justify-content: space-between;">
-                    <div class="inv-slot" id="slot-weapon" style="width:48%; font-size:8px;" onclick="unequipItem('weapon')">⚔️ Оружие</div>
-                    <div class="inv-slot" id="slot-armor" style="width:48%; font-size:8px;" onclick="unequipItem('armor')">🛡️ Доспех</div>
+            <div class="col-left">
+                <h1 style="color:#55ff55;">СНАРЯЖЕНИЕ И ЛАГЕРЬ</h1>
+                <div class="panel" style="text-align: left; font-size: 6px; line-height: 1.4; margin: 0;">
+                    <div>КЛАСС: <span id="camp-hero" style="color:#6da5ff;">АЛУКАРД</span> (<span id="camp-lvl">1</span> Ур.)</div>
+                    <div>УРОН: <span id="camp-dmg" style="color:#ff5555;">16</span> | ЗОЛОТО: <span id="camp-gold" style="color:#ffff55;">0</span></div>
+                    <div class="bar-container" style="height:6px; margin-top:4px;"><div id="camp-exp-fill" class="exp-fill"></div></div>
+                </div>
+                <div class="panel" style="margin-top: 4px;">
+                    <div style="display:flex; justify-content: space-between;">
+                        <div class="inv-slot" id="slot-weapon" style="width:48%; font-size:7px;" onclick="unequipItem('weapon')">⚔️ Оружие</div>
+                        <div class="inv-slot" id="slot-armor" style="width:48%; font-size:7px;" onclick="unequipItem('armor')">🛡️ Доспех</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="panel">
-                <div style="font-size: 6px; text-align: left; margin-bottom: 2px; color:#aaa;">РЮКЗАК (НАЖМИ ДЛЯ КЛИКА):</div>
-                <div class="inv-grid" id="inventory-container"></div>
+            <div class="col-right">
+                <div class="panel" style="margin: 0;">
+                    <div style="font-size: 5px; text-align: left; margin-bottom: 2px; color:#aaa;">РЮКЗАК (НАЖМИ ДЛЯ СЛОТА):</div>
+                    <div class="inv-grid" id="inventory-container"></div>
+                </div>
+                <div class="grid-2" style="margin-top:4px;">
+                    <button class="card-btn attack" style="min-height:30px;" onclick="craftItem()">🔨 КУЗНИЦА (30💰)</button>
+                    <button class="card-btn defend" style="min-height:30px;" onclick="buyHealPotion()">🧪 ЗЕЛЬЕ (15💰)</button>
+                </div>
+                <button class="menu-btn" style="background:#333; padding:6px; margin-top:4px;" onclick="switchScreen('screen-adventure')">НАЗАД К КАРТЕ</button>
             </div>
-
-            <div class="grid-2">
-                <button class="card-btn attack" onclick="craftItem()">🔨 КУЗНИЦА (30💰)</button>
-                <button class="card-btn defend" onclick="buyHealPotion()">🧪 ЗЕЛЬЕ ОЗ (15💰)</button>
-            </div>
-            <button class="menu-btn" style="background:#333;" onclick="switchScreen('screen-adventure')">ВЕРНУТЬСЯ К ИССЛЕДОВАНИЮ</button>
         </div>
 
         <!-- ЭКРАН 5: БОЕВАЯ СИСТЕМА -->
         <div id="screen-battle" class="screen">
-            <h1 style="color:#ff4444;">ИДЕТ БИТВА С КРИПОМ!</h1>
-            <div class="panel" id="battle-field">
-                <div style="display:flex; justify-content:space-between; font-size:6px; font-weight:bold; margin-bottom:2px;">
-                    <span id="bt-player-name" style="color:#6da5ff;">ГЕРОЙ</span>
-                    <span id="bt-enemy-name" style="color:#ff6d6d;">КРИП</span>
-                </div>
-                <div class="stage-container">
-                    <div id="hero-sprite" class="sprite float-anim">🏃‍♂️</div>
-                    <div id="enemy-sprite" class="sprite float-anim">👾</div>
-                </div>
-                <div style="text-align: left; margin-top:3px;">
-                    <div style="font-size:5px; margin-bottom:1px;">ОЗ КРИПА: <span id="enemy-hp-text">50/50</span></div>
-                    <div class="bar-container" style="height:8px;"><div id="enemy-hp-fill" class="hp-fill"></div></div>
+            <div class="col-left">
+                <h1 style="color:#ff4444; font-size:8px;">БИТВА С КРИПОМ!</h1>
+                <div class="panel" id="battle-field" style="margin: 0; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div style="display:flex; justify-content:space-between; font-size:6px; font-weight:bold;">
+                        <span id="bt-player-name" style="color:#6da5ff;">ГЕРОЙ</span>
+                        <span id="bt-enemy-name" style="color:#ff6d6d;">КРИП</span>
+                    </div>
+                    <div class="stage-container">
+                        <div id="hero-sprite" class="sprite float-anim">🏃‍♂️</div>
+                        <div id="enemy-sprite" class="sprite float-anim">👾</div>
+                    </div>
+                    <div>
+                        <div style="font-size:5px; margin-bottom:1px; text-align:left;">ОЗ ВРАГА: <span id="enemy-hp-text">50/50</span></div>
+                        <div class="bar-container" style="height:7px;"><div id="enemy-hp-fill" class="hp-fill"></div></div>
+                    </div>
                 </div>
             </div>
 
-            <div class="panel" style="padding:2px;"><div id="log">Приготовьтесь...</div></div>
+            <div class="col-right">
+                <div class="panel" style="padding:2px; margin-bottom:4px;"><div id="log">Приготовьтесь...</div></div>
 
-            <div class="panel" id="player-panel">
-                <div style="display:flex; justify-content:space-between; font-size:6px; font-weight:bold; margin-bottom:2px;">
-                    <span>ТВОЕ ОЗ: <span id="player-hp-text" style="color:#55ff55;">100/100</span></span>
-                    <span>ЭНЕРГИЯ: <span id="player-mana-text" style="color:#55aaff;">⚡ 3/3</span></span>
-                </div>
-                <div class="bar-container" style="height:10px;">
-                    <div id="player-hp-fill" class="hp-fill" style="background-color:#22cc22;"></div>
-                    <div id="player-shield-fill" class="shield-fill" style="position:absolute; top:0; left:0;"></div>
-                </div>
-                <div class="cards" style="margin-top:5px;">
-                    <button class="card-btn attack" id="btn-atk1" onclick="useCombatSkill('atk1')">⚔️ Базовая<br>(+1 ⚡)</button>
-                    <button class="card-btn attack" id="btn-atk2" onclick="useCombatSkill('atk2')">💥 Навык<br>(-1 ⚡)</button>
-                    <button class="card-btn defend" id="btn-def" onclick="useCombatSkill('def')">🛡️ Блок<br>(-1 ⚡)</button>
-                    <button class="card-btn ultimate" id="btn-ult" onclick="useCombatSkill('ult')">🔮 УЛЬТ<br>(-3 ⚡)</button>
+                <div class="panel" id="player-panel" style="margin: 0; padding: 4px;">
+                    <div style="display:flex; justify-content:space-between; font-size:6px; font-weight:bold; margin-bottom:2px;">
+                        <span>ТВОЕ ОЗ: <span id="player-hp-text" style="color:#55ff55;">100/100</span></span>
+                        <span>ЭНЕРГИЯ: <span id="player-mana-text" style="color:#55aaff;">⚡ 3/3</span></span>
+                    </div>
+                    <div class="bar-container" style="height:8px;">
+                        <div id="player-hp-fill" class="hp-fill" style="background-color:#22cc22;"></div>
+                        <div id="player-shield-fill" class="shield-fill" style="position:absolute; top:0; left:0;"></div>
+                    </div>
+                    <div class="cards" style="margin-top:6px;">
+                        <button class="card-btn attack" id="btn-atk1" onclick="useCombatSkill('atk1')">⚔️ Атака<br>(+1 ⚡)</button>
+                        <button class="card-btn attack" id="btn-atk2" onclick="useCombatSkill('atk2')">💥 Навык<br>(-1 ⚡)</button>
+                        <button class="card-btn defend" id="btn-def" onclick="useCombatSkill('def')">🛡️ Блок<br>(-1 ⚡)</button>
+                        <button class="card-btn ultimate" id="btn-ult" onclick="useCombatSkill('ult')">🔮 УЛЬТ<br>(-3 ⚡)</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -246,20 +263,13 @@ GAME_HTML = """
     </div>
 
     <script>
-        // ИГРОВОЙ СТАТУС И КОНФИГУРАЦИЯ
         let config = { sound: true, music: true, hero: 'алукард', fullscreen: false };
         let player = { lvl: 1, exp: 0, nextExp: 80, gold: 40, baseDmg: 16, hp: 100, maxHp: 100, mana: 3, maxMana: 4, shield: 0, weapon: null, armor: null };
         let inventory = [{ type: 'potion', name: 'Зелье ОЗ', icon: '🧪' }];
-        let currentZone = 0;
-        let playerX = 1;
-        let playerY = 1;
-        let combatActive = false;
-        let currentCreep = null;
-        
-        // ГЛОБАЛЬНЫЙ ОБЪЕКТ ДЛЯ БИТВ (ФИКС СТАРОГО БАГА)
+        let currentZone = 0; let playerX = 1; let playerY = 1;
+        let combatActive = false; let currentCreep = null;
         let gameState = { isGameOver: false, currentTurn: 'player' };
 
-        // База предметов
         const lootTable = [
             { type: 'weapon', name: 'Меч Легиона', icon: '🗡️', stat: 8, rare: 'common' },
             { type: 'weapon', name: 'Копьё Дракона', icon: '🔱', stat: 18, rare: 'epic' },
@@ -269,391 +279,180 @@ GAME_HTML = """
             { type: 'armor', name: 'Щит Спасителя', icon: '💎', stat: 35, rare: 'legend' }
         ];
 
-        // 5 КАРТ С РАЗНЫМИ ТИПАМИ ОБЪЕКТОВ
-        // Легенда цифр: 0-Пол, 1-Стена, 2-Крип(👾), 3-Портал(🎯), 4-Сундук(🎁), 5-Фонтан(⛲)
         const zones = [
             {
-                title: "🌲 Сады Империи Мония",
-                tileClass: "tile-floor", wallClass: "tile-wall", wallIcon: "🌲",
+                title: "🌲 Сады Империи Мония", tileClass: "tile-floor", wallClass: "tile-wall", wallIcon: "🌲",
                 map: [
-                    [1,1,1,1,1,1,1,1,1],
-                    [1,0,0,4,1,0,0,2,1],
-                    [1,0,1,0,1,0,1,0,1],
-                    [1,2,1,0,5,0,1,0,1],
-                    [1,0,1,1,1,0,1,2,1],
-                    [1,0,0,2,1,0,1,0,1],
-                    [1,1,0,0,1,0,4,0,1],
-                    [1,2,0,4,0,0,1,3,1],
-                    [1,1,1,1,1,1,1,1,1]
+                    [1,1,1,1,1,1,1,1,1], [1,0,0,4,1,0,0,2,1], [1,0,1,0,1,0,1,0,1], [1,2,1,0,5,0,1,0,1],
+                    [1,0,1,1,1,0,1,2,1], [1,0,0,2,1,0,1,0,1], [1,1,0,0,1,0,4,0,1], [1,2,0,4,0,0,1,3,1], [1,1,1,1,1,1,1,1,1]
                 ],
-                creeps: [
-                    { name: "Слайм Монии", hp: 45, maxHp: 45, sprite: "🟢", minDmg: 4, maxDmg: 8, exp: 40, gold: 15 },
-                    { name: "Гоблин-Вор", hp: 55, maxHp: 55, sprite: "👺", minDmg: 6, maxDmg: 11, exp: 50, gold: 20 }
-                ]
+                creeps: [{ name: "Слайм Монии", hp: 45, maxHp: 45, sprite: "🟢", minDmg: 4, maxDmg: 8, exp: 40, gold: 15 }]
             },
             {
-                title: "🍁 Шепчущий Древний Лес",
-                tileClass: "tile-floor", wallClass: "tile-wall", wallIcon: "🌿",
+                title: "🍁 Шепчущий Древний Лес", tileClass: "tile-floor", wallClass: "tile-wall", wallIcon: "🌿",
                 map: [
-                    [1,1,1,1,1,1,1,1,1],
-                    [1,0,2,0,4,0,1,2,1],
-                    [1,1,1,1,0,1,1,0,1],
-                    [1,0,5,2,0,0,1,0,1],
-                    [1,0,1,1,1,1,1,4,1],
-                    [1,2,1,0,0,5,0,0,1],
-                    [1,0,1,0,1,1,1,2,1],
-                    [1,4,0,0,2,0,1,3,1],
-                    [1,1,1,1,1,1,1,1,1]
+                    [1,1,1,1,1,1,1,1,1], [1,0,2,0,4,0,1,2,1], [1,1,1,1,0,1,1,0,1], [1,0,5,2,0,0,1,0,1],
+                    [1,0,1,1,1,1,1,4,1], [1,2,1,0,0,5,0,0,1], [1,0,1,0,1,1,1,2,1], [1,4,0,0,2,0,1,3,1], [1,1,1,1,1,1,1,1,1]
                 ],
-                creeps: [
-                    { name: "Лесной Волк", hp: 75, maxHp: 75, sprite: "🐺", minDmg: 9, maxDmg: 15, exp: 65, gold: 30 },
-                    { name: "Ядовитый Паук", hp: 90, maxHp: 90, sprite: "🕷️", minDmg: 11, maxDmg: 18, exp: 80, gold: 35 }
-                ]
+                creeps: [{ name: "Лесной Волк", hp: 75, maxHp: 75, sprite: "🐺", minDmg: 9, maxDmg: 15, exp: 65, gold: 30 }]
             },
             {
-                title: "⛰️ Заброшенные Шахты Эрдитии",
-                tileClass: "tile-mine", wallClass: "tile-wall", wallIcon: "🧱",
+                title: "⛰️ Заброшенные Шахты Эрдитии", tileClass: "tile-mine", wallClass: "tile-wall", wallIcon: "🧱",
                 map: [
-                    [1,1,1,1,1,1,1,1,1],
-                    [1,0,4,0,1,0,5,2,1],
-                    [1,0,1,0,0,0,1,0,1],
-                    [1,2,1,1,1,1,1,4,1],
-                    [1,0,0,2,1,0,0,0,1],
-                    [1,1,1,0,1,0,1,1,1],
-                    [1,2,5,0,1,2,1,2,1],
-                    [1,4,1,0,4,0,0,3,1],
-                    [1,1,1,1,1,1,1,1,1]
+                    [1,1,1,1,1,1,1,1,1], [1,0,4,0,1,0,5,2,1], [1,0,1,0,0,0,1,0,1], [1,2,1,1,1,1,1,4,1],
+                    [1,0,0,2,1,0,0,0,1], [1,1,1,0,1,0,1,1,1], [1,2,5,0,1,2,1,2,1], [1,4,1,0,4,0,0,3,1], [1,1,1,1,1,1,1,1,1]
                 ],
-                creeps: [
-                    { name: "Каменный Голем", hp: 130, maxHp: 130, sprite: "🗿", minDmg: 14, maxDmg: 24, exp: 120, gold: 45 },
-                    { name: "Призрак Рудника", hp: 115, maxHp: 115, sprite: "👻", minDmg: 17, maxDmg: 28, exp: 130, gold: 50 }
-                ]
+                creeps: [{ name: "Каменный Голем", hp: 130, maxHp: 130, sprite: "🗿", minDmg: 14, maxDmg: 24, exp: 120, gold: 45 }]
             },
             {
-                title: "🏜️ Выжженные Пустоши Заката",
-                tileClass: "tile-waste", wallClass: "tile-wall", wallIcon: "⛰️",
+                title: "🏜️ Пустоши Заката", tileClass: "tile-waste", wallClass: "tile-wall", wallIcon: "⛰️",
                 map: [
-                    [1,1,1,1,1,1,1,1,1],
-                    [1,0,2,1,0,2,1,4,1],
-                    [1,5,0,1,0,0,1,0,1],
-                    [1,1,0,4,5,0,0,2,1],
-                    [1,2,0,1,1,1,1,0,1],
-                    [1,0,1,1,0,4,1,0,1],
-                    [1,4,2,1,2,0,0,2,1],
-                    [1,1,0,0,0,1,1,3,1],
-                    [1,1,1,1,1,1,1,1,1]
+                    [1,1,1,1,1,1,1,1,1], [1,0,2,1,0,2,1,4,1], [1,5,0,1,0,0,1,0,1], [1,1,0,4,5,0,0,2,1],
+                    [1,2,0,1,1,1,1,0,1], [1,0,1,1,0,4,1,0,1], [1,4,2,1,2,0,0,2,1], [1,1,0,0,0,1,1,3,1], [1,1,1,1,1,1,1,1,1]
                 ],
-                creeps: [
-                    { name: "Проклятый Мечник", hp: 170, maxHp: 170, sprite: "💀", minDmg: 20, maxDmg: 32, exp: 190, gold: 65 },
-                    { name: "Адская Ищейка", hp: 150, maxHp: 150, sprite: "🐕", minDmg: 24, maxDmg: 36, exp: 200, gold: 75 }
-                ]
+                creeps: [{ name: "Проклятый Мечник", hp: 170, maxHp: 170, sprite: "💀", minDmg: 20, maxDmg: 32, exp: 190, gold: 65 }]
             },
             {
-                title: "🌋 Сумрачная Цитадель Бездны",
-                tileClass: "tile-abyss", wallClass: "tile-wall", wallIcon: "🔥",
+                title: "🌋 Цитадель Бездны", tileClass: "tile-abyss", wallClass: "tile-wall", wallIcon: "🔥",
                 map: [
-                    [1,1,1,1,1,1,1,1,1],
-                    [1,4,0,0,1,0,0,2,1],
-                    [1,0,1,0,1,0,1,0,1],
-                    [1,2,1,0,5,0,1,4,1],
-                    [1,0,1,1,1,1,1,2,1],
-                    [1,0,4,2,1,0,5,0,1],
-                    [1,1,1,0,1,0,1,1,1],
-                    [1,2,0,0,4,2,1,3,1],
-                    [1,1,1,1,1,1,1,1,1]
+                    [1,1,1,1,1,1,1,1,1], [1,4,0,0,1,0,0,2,1], [1,0,1,0,1,0,1,0,1], [1,2,1,0,5,0,1,4,1],
+                    [1,0,1,1,1,1,1,2,1], [1,0,4,2,1,0,5,0,1], [1,1,1,0,1,0,1,1,1], [1,2,0,0,4,2,1,3,1], [1,1,1,1,1,1,1,1,1]
                 ],
-                creeps: [
-                    { name: "Элитный Демон Бездны", hp: 240, maxHp: 240, sprite: "👹", minDmg: 28, maxDmg: 45, exp: 280, gold: 120 },
-                    { name: "ТАМУЗ (ЛОРД ПЕКЛА)", hp: 480, maxHp: 480, sprite: "🔱", minDmg: 38, maxDmg: 62, exp: 999, gold: 600, isBoss: true }
-                ]
+                creeps: [{ name: "ТАМУЗ (ЛОРД ПЕКЛА)", hp: 450, maxHp: 450, sprite: "🔱", minDmg: 35, maxDmg: 55, exp: 999, gold: 500, isBoss: true }]
             }
         ];
 
-        // ЗВУКОВОЙ ПРОЦЕДУРНЫЙ ДВИЖОК
-        let audioCtx = null;
-        let musicTimer = null;
-        let musicTicks = 0;
-
-        function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                runMusicEngine();
-            }
-        }
-
+        let audioCtx = null; let musicTimer = null; let musicTicks = 0;
+        function initAudio() { if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); runMusicEngine(); } }
         function makeTone(freq, wave, len, vol = 0.015) {
             if (!config.sound || !audioCtx) return;
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            let osc = audioCtx.createOscillator();
-            let gain = audioCtx.createGain();
-            osc.type = wave;
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+            osc.type = wave; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
             gain.gain.setValueAtTime(vol, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + len);
             osc.connect(gain); gain.connect(audioCtx.destination);
             osc.start(); osc.stop(audioCtx.currentTime + len);
         }
-
         function runMusicEngine() {
             if (musicTimer) clearInterval(musicTimer);
-            const basicMelody = [293.66, 329.63, 349.23, 392.00, 440.00, 392.00];
             musicTimer = setInterval(() => {
                 if (!config.music || !audioCtx || combatActive) return;
-                let note = basicMelody[musicTicks % basicMelody.length];
-                if (musicTicks % 4 === 0) makeTone(note / 2, 'triangle', 0.35, 0.01);
-                else makeTone(note, 'sine', 0.12, 0.008);
-                musicTicks++;
-            }, 350);
+                let notes = [293.66, 349.23, 440.00, 392.00];
+                let note = notes[musicTicks % notes.length];
+                makeTone(note, 'sine', 0.15, 0.006); musicTicks++;
+            }, 400);
         }
 
         const audioPack = {
-            click: () => makeTone(580, 'sine', 0.05, 0.03),
-            step: () => makeTone(130, 'triangle', 0.05, 0.02),
-            loot: () => { makeTone(440, 'sine', 0.1, 0.02); setTimeout(() => makeTone(660, 'sine', 0.15, 0.02), 80); },
-            heal: () => { makeTone(300, 'sine', 0.1, 0.03); setTimeout(() => makeTone(600, 'sine', 0.2, 0.03), 70); },
-            hit: () => { makeTone(220, 'sawtooth', 0.1, 0.03); makeTone(90, 'square', 0.08, 0.02); },
-            block: () => makeTone(380, 'sine', 0.15, 0.04),
-            lvlUp: () => { [440, 554, 659, 880].forEach((f, i) => setTimeout(() => makeTone(f, 'sine', 0.2, 0.03), i*80)); }
+            click: () => makeTone(580, 'sine', 0.05, 0.02),
+            step: () => makeTone(140, 'triangle', 0.05, 0.02),
+            loot: () => { makeTone(440, 'sine', 0.08, 0.02); setTimeout(() => makeTone(660, 'sine', 0.12, 0.02), 60); },
+            heal: () => { makeTone(300, 'sine', 0.1, 0.02); setTimeout(() => makeTone(600, 'sine', 0.15, 0.02), 60); },
+            hit: () => { makeTone(200, 'sawtooth', 0.08, 0.02); },
+            block: () => makeTone(350, 'sine', 0.1, 0.03),
+            lvlUp: () => { [440, 554, 659].forEach((f, i) => setTimeout(() => makeTone(f, 'sine', 0.15, 0.02), i*70)); }
         };
 
-        // НАСТРОЙКИ И ЭКРАНЫ
-        function switchScreen(id) {
-            initAudio();
-            audioPack.click();
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-        }
-
+        function switchScreen(id) { initAudio(); audioPack.click(); document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+        
         function toggleSetting(key) {
             initAudio(); audioPack.click();
-            if (key === 'sound' || key === 'music') {
-                config[key] = !config[key];
-                document.getElementById(`cfg-${key}`).innerText = config[key] ? "ВКЛ" : "ВЫКЛ";
-            } else if (key === 'screen') {
-                config.fullscreen = !config.fullscreen;
-                let c = document.getElementById('game-container');
-                if (config.fullscreen) {
-                    c.classList.add('fullscreen'); document.getElementById('cfg-screen').innerText = "ВЕСЬ ЭКРАН";
-                    if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-                } else {
-                    c.classList.remove('fullscreen'); document.getElementById('cfg-screen').innerText = "ОКНО";
-                    if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen();
-                }
+            if (key === 'sound' || key === 'music') { config[key] = !config[key]; document.getElementById(`cfg-${key}`).innerText = config[key] ? "ВКЛ" : "ВЫКЛ"; }
+            else if (key === 'screen') {
+                config.fullscreen = !config.fullscreen; let c = document.getElementById('game-container');
+                if (config.fullscreen) { c.classList.add('fullscreen'); document.getElementById('cfg-screen').innerText = "ВЕСЬ ЭКРАН"; if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); }
+                else { c.classList.remove('fullscreen'); document.getElementById('cfg-screen').innerText = "ОКНО"; if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen(); }
             } else if (key === 'hero') {
-                config.hero = config.hero === 'алукард' ? 'мия' : 'алукард';
-                document.getElementById('cfg-hero').innerText = config.hero.toUpperCase();
-                
-                // Классовый баланс здоровья при переключении
-                if (config.hero === 'алукард') { player.maxHp = 110; player.baseDmg = 15; }
-                else { player.maxHp = 85; player.baseDmg = 20; }
-                player.hp = player.maxHp;
+                config.hero = config.hero === 'алукард' ? 'мия' : 'алукард'; document.getElementById('cfg-hero').innerText = config.hero.toUpperCase();
+                player.maxHp = config.hero === 'алукард' ? 115 : 90; player.hp = player.maxHp;
             }
         }
 
-        // ДВИЖОК ПЕРЕМЕЩЕНИЯ И ПРИКЛЮЧЕНИЙ
         function startAdventure() {
-            // Инициализация характеристик на основе выбранного класса героя
-            if (config.hero === 'алукард') { player.maxHp = 115; player.baseDmg = 16; } 
-            else { player.maxHp = 90; player.baseDmg = 21; }
-            
-            player.gold = 40; player.lvl = 1; player.exp = 0; player.hp = player.maxHp;
-            player.weapon = null; player.armor = null;
-            inventory = [{ type: 'potion', name: 'Зелье ОЗ', icon: '🧪' }];
-            
-            loadZone(0);
+            player.maxHp = config.hero === 'алукард' ? 115 : 90; player.baseDmg = config.hero === 'алукард' ? 16 : 21;
+            player.gold = 40; player.lvl = 1; player.exp = 0; player.hp = player.maxHp; player.weapon = null; player.armor = null;
+            inventory = [{ type: 'potion', name: 'Зелье ОЗ', icon: '🧪' }]; loadZone(0);
         }
 
         function loadZone(idx) {
-            currentZone = idx;
-            if (currentZone >= zones.length) {
-                alert("🏆 КВЕСТ ЗАВЕРШЕН! Вы прошли все 5 локаций, победили Тамуза и спасли Империю Мония!");
-                switchScreen('screen-menu');
-                return;
-            }
-            playerX = 1; playerY = 1;
-            renderMap();
-            switchScreen('screen-adventure');
+            currentZone = idx; if (currentZone >= zones.length) { alert("🏆 ПОБЕДА! Мония спасена!"); switchScreen('screen-menu'); return; }
+            playerX = 1; playerY = 1; renderMap(); switchScreen('screen-adventure');
         }
 
         function renderMap() {
             let z = zones[currentZone];
             document.getElementById('adv-location-title').innerText = `${currentZone+1}/5: ${z.title}`;
             document.getElementById('adv-hp').innerText = `${player.hp}/${player.maxHp}`;
-            document.getElementById('adv-gold').innerText = player.gold;
-            document.getElementById('adv-lvl').innerText = player.lvl;
-
-            let grid = document.getElementById('map-grid');
-            grid.innerHTML = "";
-
+            document.getElementById('adv-gold').innerText = player.gold; document.getElementById('adv-lvl').innerText = player.lvl;
+            
+            let grid = document.getElementById('map-grid'); grid.innerHTML = "";
             for (let y = 0; y < 9; y++) {
                 for (let x = 0; x < 9; x++) {
-                    let cell = document.createElement('div');
-                    let code = z.map[y][x];
-
+                    let cell = document.createElement('div'); let code = z.map[y][x];
                     cell.className = "map-tile " + z.tileClass;
-                    
-                    if (code === 1) {
-                        cell.className = "map-tile " + z.wallClass;
-                        cell.innerText = z.wallIcon;
-                    } else if (code === 2) {
-                        cell.innerText = "👾";
-                    } else if (code === 3) {
-                        cell.innerText = "🎯";
-                    } else if (code === 4) {
-                        cell.innerText = "🎁";
-                    } else if (code === 5) {
-                        cell.innerText = "⛲";
-                    }
-
-                    if (x === playerX && y === playerY) {
-                        cell.innerText = config.hero === 'алукард' ? "🏃‍♂️" : "🏹";
-                    }
-
+                    if (code === 1) { cell.className = "map-tile " + z.wallClass; cell.innerText = z.wallIcon; }
+                    else if (code === 2) cell.innerText = "👾"; else if (code === 3) cell.innerText = "🎯";
+                    else if (code === 4) cell.innerText = "🎁"; else if (code === 5) cell.innerText = "⛲";
+                    if (x === playerX && y === playerY) cell.innerText = config.hero === 'алукард' ? "🏃‍♂️" : "🏹";
                     grid.appendChild(cell);
                 }
             }
         }
 
         function movePlayer(dx, dy) {
-            if (combatActive) return;
-            initAudio();
-            
-            let targetX = playerX + dx;
-            let targetY = playerY + dy;
-            let z = zones[currentZone];
-
-            if (targetX >= 0 && targetX < 9 && targetY >= 0 && targetY < 9) {
-                if (z.map[targetY][targetX] !== 1) {
-                    playerX = targetX;
-                    playerY = targetY;
-                    audioPack.step();
-
-                    let trigger = z.map[playerY][playerX];
-                    if (trigger === 2) {
-                        triggerBattle();
-                        return;
-                    } else if (trigger === 3) {
-                        alert("✨ Портал активирован! Перемещение в новую локацию...");
-                        loadZone(currentZone + 1);
-                        return;
-                    } else if (trigger === 4) {
-                        // НАХОДКА СУНДУКА
-                        let bonusGold = Math.floor(Math.random() * 20) + 15;
-                        player.gold += bonusGold;
-                        audioPack.loot();
-                        alert(`🎁 Вы открыли старый сундук! Найдено: +${bonusGold} золотых монет!`);
-                        z.map[playerY][playerX] = 0; // убираем сундук
-                    } else if (trigger === 5) {
-                        // НАХОДКА ФОНТАНА ЖИЗНИ
-                        player.hp = player.maxHp;
-                        audioPack.heal();
-                        alert("⛲ Магический Фонтан полностью исцелил ваши раны!");
-                        z.map[playerY][playerX] = 0; // осушаем фонтан
-                    }
-                    renderMap();
-                }
+            if (combatActive) return; initAudio();
+            let tx = playerX + dx, ty = playerY + dy; let z = zones[currentZone];
+            if (tx >= 0 && tx < 9 && ty >= 0 && ty < 9 && z.map[ty][tx] !== 1) {
+                playerX = tx; playerY = ty; audioPack.step();
+                let trg = z.map[playerY][playerX];
+                if (trg === 2) { triggerBattle(); return; }
+                if (trg === 3) { alert("✨ Телепортация..."); loadZone(currentZone + 1); return; }
+                if (trg === 4) { let g = Math.floor(Math.random()*15)+15; player.gold += g; audioPack.loot(); alert(`🎁 Золото: +${g}💰`); z.map[playerY][playerX] = 0; }
+                if (trg === 5) { player.hp = player.maxHp; audioPack.heal(); alert("⛲ Фонтан полностью исцелил вас!"); z.map[playerY][playerX] = 0; }
+                renderMap();
             }
         }
 
-        // Клавиатура WASD
         window.addEventListener('keydown', (e) => {
-            if (document.getElementById('screen-adventure').classList.contains('active')) {
-                if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') movePlayer(0, -1);
-                if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') movePlayer(0, 1);
-                if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') movePlayer(-1, 0);
-                if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') movePlayer(1, 0);
-            }
+            if (!document.getElementById('screen-adventure').classList.contains('active')) return;
+            if (e.key === 'w' || e.key === 'ArrowUp') movePlayer(0, -1); if (e.key === 's' || e.key === 'ArrowDown') movePlayer(0, 1);
+            if (e.key === 'a' || e.key === 'ArrowLeft') movePlayer(-1, 0); if (e.key === 'd' || e.key === 'ArrowRight') movePlayer(1, 0);
         });
 
-        // ЛАГЕРЬ, КУЗНИЦА И ХАБ УПРАВЛЕНИЯ ПЕРСОНАЖЕМ
         function openCampHub() {
-            switchScreen('screen-camp');
-            document.getElementById('camp-hero').innerText = config.hero.toUpperCase();
-            document.getElementById('camp-lvl').innerText = player.lvl;
-            document.getElementById('camp-gold').innerText = player.gold;
+            switchScreen('screen-camp'); document.getElementById('camp-hero').innerText = config.hero.toUpperCase();
+            document.getElementById('camp-lvl').innerText = player.lvl; document.getElementById('camp-gold').innerText = player.gold;
             document.getElementById('camp-exp-fill').style.width = `${(player.exp / player.nextExp)*100}%`;
-            
-            let wStat = player.weapon ? player.weapon.stat : 0;
-            document.getElementById('camp-dmg').innerText = player.baseDmg + wStat;
-
-            document.getElementById('slot-weapon').innerText = player.weapon ? `${player.weapon.icon} +${player.weapon.stat} Урн` : '⚔️ Без оружия';
-            document.getElementById('slot-armor').innerText = player.armor ? `${player.armor.icon} +${player.armor.stat} Зщт` : '🛡️ Без доспеха';
-
-            let box = document.getElementById('inventory-container');
-            box.innerHTML = "";
-            inventory.forEach((item, index) => {
-                let slot = document.createElement('div');
-                slot.className = `inv-slot ${item.rare || 'common'}`;
-                slot.innerText = item.icon;
-                slot.onclick = () => useItem(index);
-                box.appendChild(slot);
+            let wStat = player.weapon ? player.weapon.stat : 0; document.getElementById('camp-dmg').innerText = player.baseDmg + wStat;
+            document.getElementById('slot-weapon').innerText = player.weapon ? `${player.weapon.icon} +${player.weapon.stat}` : '⚔️ Руки';
+            document.getElementById('slot-armor').innerText = player.armor ? `${player.armor.icon} +${player.armor.stat}` : '🛡️ Голый';
+            let box = document.getElementById('inventory-container'); box.innerHTML = "";
+            inventory.forEach((item, i) => {
+                let slot = document.createElement('div'); slot.className = `inv-slot ${item.rare || 'common'}`;
+                slot.innerText = item.icon; slot.onclick = () => useItem(i); box.appendChild(slot);
             });
         }
 
         function useItem(idx) {
-            let item = inventory[idx];
-            audioPack.click();
-            if (item.type === 'potion') {
-                player.hp = player.maxHp;
-                alert("🧪 Зелье выпито. ОЗ восстановлено до максимума!");
-                inventory.splice(idx, 1);
-            } else if (item.type === 'weapon') {
-                if (player.weapon) inventory.push(player.weapon);
-                player.weapon = item; inventory.splice(idx, 1);
-                alert(`⚔️ В руки взят: ${item.name}`);
-            } else if (item.type === 'armor') {
-                if (player.armor) inventory.push(player.armor);
-                player.armor = item; inventory.splice(idx, 1);
-                alert(`🛡️ Надет защитный доспех: ${item.name}`);
-            }
+            let item = inventory[idx]; audioPack.click();
+            if (item.type === 'potion') { player.hp = player.maxHp; alert("🧪 ОЗ восстановлено!"); inventory.splice(idx, 1); }
+            else { if (player[item.type]) inventory.push(player[item.type]); player[item.type] = item; inventory.splice(idx, 1); alert(`Надето: ${item.name}`); }
             openCampHub();
         }
+        function unequipItem(slot) { if (player[slot]) { inventory.push(player[slot]); player[slot] = null; openCampHub(); } }
+        function buyHealPotion() { if (player.gold >= 15) { player.gold -= 15; inventory.push({ type: 'potion', name: 'Зелье', icon: '🧪' }); openCampHub(); } else alert("Мало монет!"); }
+        function craftItem() { if (player.gold >= 30) { player.gold -= 30; let r = { ...lootTable[Math.floor(Math.random() * lootTable.length)] }; inventory.push(r); alert(`🔨 Выковано: ${r.name}`); openCampHub(); } else alert("Нужно 30💰"); }
 
-        function unequipItem(slot) {
-            if (slot === 'weapon' && player.weapon) { inventory.push(player.weapon); player.weapon = null; }
-            if (slot === 'armor' && player.armor) { inventory.push(player.armor); player.armor = null; }
-            openCampHub();
-        }
-
-        function buyHealPotion() {
-            if (player.gold >= 15) {
-                player.gold -= 15;
-                inventory.push({ type: 'potion', name: 'Зелье ОЗ', icon: '🧪' });
-                openCampHub();
-            } else alert("Недостаточно золота!");
-        }
-
-        function craftItem() {
-            if (player.gold >= 30) {
-                player.gold -= 30;
-                let rolled = { ...lootTable[Math.floor(Math.random() * lootTable.length)] };
-                inventory.push(rolled);
-                alert(`🔨 Вы переплавили золото и выковали: ${rolled.name}!`);
-                openCampHub();
-            } else alert("Кузнецу нужно 30 монет!");
-        }
-
-        // БОЕВОЙ ПОШАГОВЫЙ ДВИЖОК
         function triggerBattle() {
-            combatActive = true;
-            gameState.isGameOver = false;
-            gameState.currentTurn = 'player';
-
-            let pool = zones[currentZone].creeps;
-            let chosen = pool[Math.floor(Math.random() * pool.length)];
-            currentCreep = { ...chosen };
-
+            combatActive = true; gameState.isGameOver = false; gameState.currentTurn = 'player';
+            let pool = zones[currentZone].creeps; currentCreep = { ...pool[Math.floor(Math.random() * pool.length)] };
             document.getElementById('bt-player-name').innerText = config.hero.toUpperCase();
             document.getElementById('bt-enemy-name').innerText = currentCreep.name;
             document.getElementById('enemy-sprite').innerText = currentCreep.sprite;
             document.getElementById('hero-sprite').innerText = config.hero === 'алукард' ? '⚔️' : '🏹';
-
-            player.mana = 3;
-            player.shield = 0;
-
-            document.getElementById('log').innerHTML = `Внимание! На вас напал ${currentCreep.name}. Ваш первый ход!`;
-            updateBattleUI();
-            switchScreen('screen-battle');
+            player.mana = 3; player.shield = 0; document.getElementById('log').innerHTML = "Начало боя!";
+            updateBattleUI(); switchScreen('screen-battle');
         }
 
         function updateBattleUI() {
@@ -661,182 +460,66 @@ GAME_HTML = """
             document.getElementById('player-hp-fill').style.width = `${(player.hp / player.maxHp)*100}%`;
             document.getElementById('player-shield-fill').style.width = `${(player.shield / player.maxHp)*100}%`;
             document.getElementById('player-mana-text').innerText = `⚡ ${player.mana}/${player.maxMana}`;
-
             document.getElementById('enemy-hp-text').innerText = `${currentCreep.hp}/${currentCreep.maxHp}`;
             document.getElementById('enemy-hp-fill').style.width = `${(currentCreep.hp / currentCreep.maxHp)*100}%`;
-
             let myTurn = (gameState.currentTurn === 'player' && !gameState.isGameOver);
-            document.getElementById('btn-atk1').disabled = !myTurn;
-            document.getElementById('btn-atk2').disabled = !myTurn || player.mana < 1;
-            document.getElementById('btn-def').disabled = !myTurn || player.mana < 1;
-            document.getElementById('btn-ult').disabled = !myTurn || player.mana < 3;
+            document.getElementById('btn-atk1').disabled = !myTurn; document.getElementById('btn-atk2').disabled = !myTurn || player.mana < 1;
+            document.getElementById('btn-def').disabled = !myTurn || player.mana < 1; document.getElementById('btn-ult').disabled = !myTurn || player.mana < 3;
         }
 
-        function addLog(txt, color='#fff') {
-            let l = document.getElementById('log'); l.innerHTML += `<br><span style="color:${color}">${txt}</span>`;
-            l.scrollTop = l.scrollHeight;
+        function addLog(t, c='#fff') { let l = document.getElementById('log'); l.innerHTML += `<br><span style="color:${c}">${t}</span>`; l.scrollTop = l.scrollHeight; }
+        function triggerDamageText(v, side) {
+            let d = document.createElement('div'); d.className = 'damage-pop'; d.innerText = v; d.style.left = side ? '70%' : '20%'; d.style.bottom = '35px';
+            if (v.includes('+') || v.includes('Блок')) d.style.color = '#55ff55'; if (v.includes('💥')) d.style.color = '#ffff55';
+            document.getElementById('battle-field').appendChild(d); setTimeout(() => d.remove(), 600);
         }
 
-        function triggerDamageText(val, isCreepSide) {
-            let div = document.createElement('div'); div.className = 'damage-pop'; div.innerText = val;
-            div.style.left = isCreepSide ? '72%' : '22%'; div.style.bottom = '40px';
-            if (val.includes('+') || val.includes('Блок')) div.style.color = '#55ff55';
-            if (val.includes('💥')) div.style.color = '#ffff55';
-            document.getElementById('battle-field').appendChild(div); setTimeout(() => div.remove(), 600);
-        }
-
-        function useCombatSkill(skillType) {
+        function useCombatSkill(sk) {
             if (gameState.isGameOver || gameState.currentTurn !== 'player') return;
+            let spr = document.getElementById('hero-sprite'); let dmg = player.baseDmg + (player.weapon ? player.weapon.stat : 0);
+            spr.classList.add('strike-left'); setTimeout(() => spr.classList.remove('strike-left'), 300);
 
-            let hSprite = document.getElementById('hero-sprite');
-            let wBonus = player.weapon ? player.weapon.stat : 0;
-            let fullDmg = player.baseDmg + wBonus;
-
-            if (skillType === 'atk1') {
-                // Базовая атака
-                let finalDmg = Math.floor(fullDmg * 0.8) + Math.floor(Math.random() * 5);
-                
-                // Классовые особенности: Шанс крита Мии / Вампиризм Алукарда
-                let isCrit = false;
-                if (config.hero === 'мия' && Math.random() < 0.25) { finalDmg *= 2; isCrit = true; }
-                
-                currentCreep.hp = Math.max(0, currentCreep.hp - finalDmg);
-                player.mana = Math.min(player.maxMana, player.mana + 1);
-                
-                audioPack.hit(); hSprite.classList.add('strike-left');
-                setTimeout(() => hSprite.classList.remove('strike-left'), 300);
-                
-                if (config.hero === 'алукард') {
-                    let vamps = Math.floor(finalDmg * 0.25);
-                    player.hp = Math.min(player.maxHp, player.hp + vamps);
-                    triggerDamageText(`+${vamps}`, false);
-                }
-
-                triggerDamageText(isCrit ? `💥${finalDmg}!` : `-${finalDmg}`, true);
-                addLog(`Вы нанесли ${finalDmg} урона. Получена +1 Энергия.`);
-            }
-            else if (skillType === 'atk2') {
-                // Специальный активный скилл
-                player.mana -= 1;
-                let finalDmg = Math.floor(fullDmg * 1.4) + Math.floor(Math.random() * 8);
-                currentCreep.hp = Math.max(0, currentCreep.hp - finalDmg);
-                
-                audioPack.hit(); hSprite.classList.add('strike-left');
-                setTimeout(() => hSprite.classList.remove('strike-left'), 300);
-                
-                triggerDamageText(`-${finalDmg}`, true);
-                addLog(`Применен Навык класса: нанесено ${finalDmg} урона.`, '#ff9999');
-            }
-            else if (skillType === 'def') {
-                // Защитный блок
-                player.mana -= 1;
-                let aBonus = player.armor ? player.armor.stat : 0;
-                let shieldGain = 16 + aBonus + Math.floor(Math.random() * 8);
-                player.shield += shieldGain;
-                
-                audioPack.block();
-                triggerDamageText(`+🛡️${shieldGain}`, false);
-                addLog(`Герой закрылся щитом: +${shieldGain} брони.`, '#55aaff');
-            }
-            else if (skillType === 'ult') {
-                // Мощный Ультимейт
-                player.mana -= 3;
-                let finalDmg = Math.floor(fullDmg * 2.4) + Math.floor(Math.random() * 15);
-                currentCreep.hp = Math.max(0, currentCreep.hp - finalDmg);
-                
-                // Эффект лечения от ульты
-                let lifeSteal = Math.floor(finalDmg * 0.35);
-                player.hp = Math.min(player.maxHp, player.hp + lifeSteal);
-                
-                audioPack.hit();
-                document.getElementById('battle-field').classList.add('flash-red');
-                setTimeout(() => document.getElementById('battle-field').classList.remove('flash-red'), 250);
-                
-                triggerDamageText(`💥${finalDmg}`, true);
-                triggerDamageText(`+${lifeSteal}`, false);
-                addLog(`🔮 УЛЬТИМАТИВНЫЙ УДАР БОГА ВОЙНЫ! Нанесено ${finalDmg} урона!`, '#ffff44');
+            if (sk === 'atk1') {
+                let f = Math.floor(dmg*0.8) + Math.floor(Math.random()*4); let cr = false;
+                if (config.hero === 'мия' && Math.random() < 0.25) { f *= 2; cr = true; }
+                currentCreep.hp = Math.max(0, currentCreep.hp - f); player.mana = Math.min(player.maxMana, player.mana + 1); audioPack.hit();
+                if (config.hero === 'алукард') { let v = Math.floor(f*0.25); player.hp = Math.min(player.maxHp, player.hp + v); triggerDamageText(`+${v}`, false); }
+                triggerDamageText(cr ? `💥${f}!` : `-${f}`, true); addLog(`Удар: ${f} ед.`);
+            } else if (sk === 'atk2') {
+                player.mana -= 1; let f = Math.floor(dmg*1.4) + Math.floor(Math.random()*6); currentCreep.hp = Math.max(0, currentCreep.hp - f);
+                audioPack.hit(); triggerDamageText(`-${f}`, true); addLog(`Навык: ${f} урона!`, '#ff9999');
+            } else if (sk === 'def') {
+                player.mana -= 1; let s = 16 + (player.armor ? player.armor.stat : 0); player.shield += s;
+                audioPack.block(); triggerDamageText(`+🛡️${s}`, false); addLog(`Броня: +${s}`, '#55aaff');
+            } else if (sk === 'ult') {
+                player.mana -= 3; let f = Math.floor(dmg*2.4) + Math.floor(Math.random()*10); currentCreep.hp = Math.max(0, currentCreep.hp - f);
+                let l = Math.floor(f*0.3); player.hp = Math.min(player.maxHp, player.hp + l); audioPack.hit();
+                document.getElementById('battle-field').classList.add('flash-red'); setTimeout(() => document.getElementById('battle-field').classList.remove('flash-red'), 200);
+                triggerDamageText(`💥${f}`, true); triggerDamageText(`+${l}`, false); addLog(`🔮 УЛЬТИМЕЙТ: ${f} урона!`, '#ffff44');
             }
 
-            updateBattleUI();
-
-            if (currentCreep.hp <= 0) {
-                endBattleWithVictory();
-                return;
-            }
-
-            gameState.currentTurn = 'enemy';
-            setTimeout(executeEnemyAI, 700);
+            updateBattleUI(); if (currentCreep.hp <= 0) { endBattle(true); return; }
+            gameState.currentTurn = 'enemy'; setTimeout(enemyTurn, 600);
         }
 
-        function executeEnemyAI() {
+        function enemyTurn() {
             if (gameState.isGameOver) return;
-            
-            let eSprite = document.getElementById('enemy-sprite');
-            eSprite.classList.add('strike-right'); setTimeout(() => eSprite.classList.remove('strike-right'), 300);
-
-            let rawEnemyDmg = Math.floor(Math.random() * (currentCreep.maxDmg - currentCreep.minDmg + 1)) + currentCreep.minDmg;
-            
-            if (player.shield > 0) {
-                if (player.shield >= rawEnemyDmg) {
-                    player.shield -= rawEnemyDmg;
-                    rawEnemyDmg = 0;
-                    addLog(`🛡️ Ваша активная броня поглотила атаку врага.`);
-                } else {
-                    rawEnemyDmg -= player.shield;
-                    player.shield = 0;
-                    addLog(`🛡️ Защитный экран разрушен!`);
-                }
-            }
-
-            if (rawEnemyDmg > 0) {
-                player.hp = Math.max(0, player.hp - rawEnemyDmg);
-                triggerDamageText(`-${rawEnemyDmg}`, false);
-                audioPack.hit();
-                addLog(`${currentCreep.name} контратакует и наносит вам ${rawEnemyDmg} урона.`, '#ff4444');
-            } else {
-                triggerDamageText("Блок", false);
-                audioPack.block();
-            }
-
-            updateBattleUI();
-
-            if (player.hp <= 0) {
-                gameState.isGameOver = true;
-                alert(`💀 Вы пали в бою. Путешествие по этой карте прервано!`);
-                combatActive = false;
-                switchScreen('screen-menu');
-                return;
-            }
-
-            gameState.currentTurn = 'player';
-            updateBattleUI();
+            let spr = document.getElementById('enemy-sprite'); spr.classList.add('strike-right'); setTimeout(() => spr.classList.remove('strike-right'), 300);
+            let ed = Math.floor(Math.random()*(currentCreep.maxDmg - currentCreep.minDmg + 1)) + currentCreep.minDmg;
+            if (player.shield > 0) { if (player.shield >= ed) { player.shield -= ed; ed = 0; } else { ed -= player.shield; player.shield = 0; } }
+            if (ed > 0) { player.hp = Math.max(0, player.hp - ed); triggerDamageText(`-${ed}`, false); audioPack.hit(); addLog(`Враг нанес: ${ed}`, '#ff4444'); }
+            else { triggerDamageText("Блок", false); audioPack.block(); }
+            updateBattleUI(); if (player.hp <= 0) { endBattle(false); } else { gameState.currentTurn = 'player'; updateBattleUI(); }
         }
 
-        function endBattleWithVictory() {
-            gameState.isGameOver = true;
-            audioPack.lvlUp();
-            player.gold += currentCreep.gold;
-            player.exp += currentCreep.exp;
-            
-            alert(`⚔️ Крип повержен! Получено: +${currentCreep.gold}💰 и +${currentCreep.exp} EXP!`);
-            
-            // Удаляем крипа с текущих координат карты навсегда
-            zones[currentZone].map[playerY][playerX] = 0;
-            combatActive = false;
-
-            // Расчет повышения уровня
-            if (player.exp >= player.nextExp) {
-                player.lvl++;
-                player.exp -= player.nextExp;
-                player.nextExp = Math.floor(player.nextExp * 1.35);
-                player.baseDmg += 5;
-                player.maxHp += 15;
-                player.hp = player.maxHp;
-                alert(`✨ УРОВЕНЬ ПОВЫШЕН! Вы достигли уровня ${player.lvl}! Базовый урон и ОЗ возросли.`);
-            }
-
-            renderMap();
-            switchScreen('screen-adventure');
+        function endBattle(win) {
+            gameState.isGameOver = true; combatActive = false;
+            if (win) {
+                audioPack.lvlUp(); player.gold += currentCreep.gold; player.exp += currentCreep.exp;
+                alert(`✌️ Победа! +${currentCreep.gold}💰 | +${currentCreep.exp} EXP`); zones[currentZone].map[playerY][playerX] = 0;
+                if (player.exp >= player.nextExp) { player.lvl++; player.exp -= player.nextExp; player.nextExp = Math.floor(player.nextExp*1.35); player.baseDmg += 4; player.maxHp += 12; player.hp = player.maxHp; alert("✨ УРОВЕНЬ ПОВЫШЕН!"); }
+                renderMap(); switchScreen('screen-adventure');
+            } else { alert("💀 Вы проиграли! Игра начнется сначала."); switchScreen('screen-menu'); }
         }
     </script>
 </body>
