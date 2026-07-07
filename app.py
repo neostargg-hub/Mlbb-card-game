@@ -8,16 +8,18 @@ GAME_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MLBB RPG: Гипер-Эволюция — v9.0</title>
+    <title>MLBB RPG: Симфония Элементов — v10.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-main: #030308; --bg-panel: #090912; --border: #3d3d5c;
+            --text-main: #e0e0f0; --accent: #ffff55; --hp: #ff4444;
+            --mana: #55aaff; --dust: #aa55ff; --gold: #ffff55;
+        }
         *, *::before, *::after { box-sizing: border-box; }
         body {
-            font-family: 'Press Start 2P', cursive;
-            background-color: #030308;
-            color: #e0e0f0;
-            margin: 0; padding: 5px; font-size: 7px;
-            text-align: center; overflow: hidden;
+            font-family: 'Press Start 2P', cursive; background-color: var(--bg-main); color: var(--text-main);
+            margin: 0; padding: 5px; font-size: 7px; text-align: center; overflow: hidden;
             user-select: none; -webkit-user-select: none;
             height: 100vh; display: flex; justify-content: center; align-items: center;
         }
@@ -27,236 +29,192 @@ GAME_HTML = """
             display: flex; flex-direction: column; justify-content: space-between;
             background: linear-gradient(135deg, #0b0b1a 0%, #030308 100%);
             border: 4px solid #555577; box-shadow: 0 0 50px rgba(0,0,0,0.95);
-            padding: 8px; position: relative;
+            padding: 8px; position: relative; overflow: hidden;
         }
-        #game-container.fullscreen { max-width: 100vw; max-height: 100vh; border: none; padding: 10px; }
         
         .screen { display: none; height: 100%; flex-direction: column; justify-content: space-between; }
-        .screen.active { display: flex; }
+        .screen.active { display: flex; animation: fadeIn 0.3s ease-out; }
         .col-left, .col-right { width: 100%; display: flex; flex-direction: column; justify-content: space-between; }
         
         @media (orientation: landscape) and (min-width: 550px) {
             #game-container { max-width: 920px; max-height: 450px; flex-direction: row; padding: 10px; }
             .screen { flex-direction: row !important; width: 100%; gap: 14px; }
-            .col-left { width: 49%; height: 100%; justify-content: space-between; }
-            .col-right { width: 49%; height: 100%; justify-content: space-between; }
+            .col-left, .col-right { width: 49%; height: 100%; }
         }
 
-        h1 { font-size: 10px; color: #ffff55; text-shadow: 2px 2px #000; margin: 3px 0; text-transform: uppercase; letter-spacing: 1px; }
-        .subtitle { font-size: 6px; color: #8a8ab0; margin-bottom: 4px; text-transform: uppercase; }
-        .panel { background-color: #090912; border: 2px solid #3d3d5c; box-shadow: 3px 3px 0px #000; padding: 6px; margin-bottom: 4px; position: relative; }
+        h1 { font-size: 10px; color: var(--accent); text-shadow: 2px 2px #000; margin: 3px 0; letter-spacing: 1px; line-height: 1.4; }
+        .panel { background-color: var(--bg-panel); border: 2px solid var(--border); box-shadow: 3px 3px 0px #000; padding: 6px; margin-bottom: 4px; position: relative; }
         
-        /* ОКНО КАМЕРЫ (VIEWPORT 7x7 вместо сжатого 9x9) */
+        /* КАРТА И ОСВЕЩЕНИЕ */
         #viewport-container {
-            width: 100%; max-width: 245px; margin: 4px auto;
-            border: 3px solid #444466; background: #020205; padding: 2px;
-            overflow: hidden; box-shadow: inset 0 0 10px #000;
+            width: 100%; max-width: 250px; margin: 4px auto;
+            border: 3px solid #444466; background: #000; padding: 2px;
+            box-shadow: inset 0 0 15px #000;
         }
-        #map-grid {
-            display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px;
-            width: 100%;
-        }
-
+        #map-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; width: 100%; }
         .map-tile {
             aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-            font-size: 13px; background: #121e12; border-radius: 3px; text-shadow: 1px 1px 0 #000;
-            transition: all 0.1s ease;
+            font-size: 14px; background: #121e12; border-radius: 2px;
+            transition: opacity 0.3s ease, transform 0.1s;
         }
-        .tile-wall { background: #222230; }
-        .tile-floor { background: #122212; }
-        .tile-mine { background: #2d1f18; }
-        .tile-waste { background: #362218; }
-        .tile-abyss { background: #300a0a; }
+        .dimmed-1 { opacity: 0.6; filter: brightness(0.6); }
+        .dimmed-2 { opacity: 0.2; filter: brightness(0.3); }
+        .dimmed-3 { opacity: 0.05; filter: brightness(0.1); }
+        .tile-wall { background: #1a1a24; color: #445; }
 
-        .dpad-container { display: grid; grid-template-columns: repeat(3, 1fr); width: 150px; margin: 2px auto; gap: 5px; }
-        .dpad-btn { font-family: 'Press Start 2P'; font-size: 16px; background: #252542; color: #fff; border: 2px outset #555588; padding: 11px 0; cursor: pointer; border-radius: 6px; }
-        .dpad-btn:active { border-style: inset; background: #15152b; color: #ffea00; }
-
-        .bar-container { width: 100%; height: 12px; background-color: #111; border: 2px solid #fff; margin-top: 2px; position: relative; }
-        .hp-fill { height: 100%; background-color: #cc2222; width: 100%; transition: width 0.2s; }
-        .mana-fill { height: 100%; background-color: #1f75fe; width: 100%; transition: width 0.2s; }
-        .shield-fill { height: 100%; background-color: #777788; width: 0%; transition: width 0.2s; }
-        .exp-fill { height: 100%; background-color: #aa22cc; width: 0%; }
-
-        #log { height: 55px; overflow-y: auto; background: #010104; color: #4aff4a; padding: 4px; text-align: left; border: 2px solid #3d3d5c; font-size: 5.5px; line-height: 1.5; }
-        @media (orientation: landscape) { #log { height: 85px; } }
+        /* ИНТЕРФЕЙС И КНОПКИ */
+        .btn { font-family: 'Press Start 2P'; background: #1c1c3a; color: #d4af37; border: 3px outset #4a4a88; padding: 10px; cursor: pointer; border-radius: 4px; width: 100%; font-size: 8px; margin-top: 4px; }
+        .btn:active { border-style: inset; background: #111124; }
+        .btn:disabled { opacity: 0.3; cursor: not-allowed; filter: grayscale(1); }
         
-        .menu-btn { font-family: 'Press Start 2P', cursive; background-color: #1c1c3a; color: #d4af37; border: 3px outset #4a4a88; padding: 10px; width: 95%; margin: 4px auto; display: block; font-size: 8px; cursor: pointer; border-radius: 4px; }
-        .menu-btn:active { border-style: inset; background-color: #111124; }
+        .dpad-container { display: grid; grid-template-columns: repeat(3, 1fr); width: 140px; margin: 2px auto; gap: 5px; }
+        .dpad-btn { font-family: 'Press Start 2P'; font-size: 16px; background: #252542; color: #fff; border: 2px outset #555588; padding: 12px 0; cursor: pointer; border-radius: 6px; }
+        .dpad-btn:active { border-style: inset; background: #15152b; color: var(--accent); }
+
+        .bar-wrap { width: 100%; height: 10px; background-color: #111; border: 2px solid #fff; position: relative; margin: 2px 0; }
+        .bar-fill { height: 100%; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        #log { height: 60px; overflow-y: auto; background: #010104; color: #aaa; padding: 5px; text-align: left; border: 2px solid var(--border); font-size: 5.5px; line-height: 1.6; }
         
-        .cards { display: flex; flex-wrap: wrap; gap: 4px; justify-content: space-between; }
-        .card-btn { font-family: 'Press Start 2P', cursive; background-color: #111124; color: #fff; border: 2px outset #3a3a5c; padding: 8px 1px; font-size: 6px; cursor: pointer; width: 49%; min-height: 42px; border-radius: 4px; line-height: 1.4; }
-        .card-btn:disabled { opacity: 0.25; cursor: not-allowed; border-color: #222; }
-        .attack { color: #ff6666; border-color: #bb4444; } .defend { color: #66b2ff; border-color: #4488cc; } .ultimate { color: #ffff55; border-color: #d4af37; font-weight: bold; }
+        .stage-container { position: relative; height: 90px; background: #020208; border: 2px solid #333; margin: 4px 0; overflow: hidden; }
+        .sprite { font-size: 38px; position: absolute; bottom: 8px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; }
+        #hero-sprite { left: 15%; transform: scaleX(-1); } #enemy-sprite { right: 15%; }
 
-        .stage-container { position: relative; height: 85px; overflow: hidden; background: #020208; border: 2px solid #333; margin-top: 2px; }
-        .sprite { font-size: 36px; position: absolute; bottom: 4px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-        #hero-sprite { left: 15%; transform: scaleX(-1); }
-        #enemy-sprite { right: 15%; }
+        /* АНИМАЦИИ */
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+        .anim-float { animation: float 2s infinite ease-in-out; }
+        .anim-atk-l { animation: strikeL 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .anim-atk-r { animation: strikeR 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes float { 0%, 100% { transform: translateY(0) scaleX(-1); } 50% { transform: translateY(-5px) scaleX(-1); } }
+        @keyframes strikeL { 0%, 100% { left: 15%; } 50% { left: 45%; transform: scaleX(-1) scale(1.3) rotate(15deg); z-index: 10; } }
+        @keyframes strikeR { 0%, 100% { right: 15%; } 50% { right: 45%; transform: scale(1.3) rotate(-15deg); z-index: 10; } }
+
+        /* ВСПЛЫВАЮЩИЕ УВЕДОМЛЕНИЯ (TOASTS) */
+        #toast-container { position: absolute; top: 10px; left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; pointer-events: none; z-index: 100; }
+        .toast { background: rgba(10, 10, 25, 0.95); border: 2px solid var(--accent); color: #fff; padding: 8px 12px; margin-bottom: 5px; border-radius: 4px; font-size: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.8); animation: toastAnim 2.5s forwards; }
+        @keyframes toastAnim { 0% { opacity: 0; transform: translateY(-20px); } 10% { opacity: 1; transform: translateY(0); } 90% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-20px); } }
         
-        .float-anim { animation: floatEff 1.6s infinite ease-in-out; }
-        .strike-left { animation: strikeL 0.25s ease-in-out; }
-        .strike-right { animation: strikeR 0.25s ease-in-out; }
-        .flash-red { animation: flashR 0.2s ease-in-out; }
-        @keyframes floatEff { 0%, 100% { bottom: 4px; } 50% { bottom: 12px; } }
-        @keyframes strikeL { 0% { left: 15%; } 50% { left: 45%; transform: scaleX(-1) scale(1.3); } 100% { left: 15%; } }
-        @keyframes strikeR { 0% { right: 15%; } 50% { right: 45%; transform: scale(1.3); } 100% { right: 15%; } }
-        @keyframes flashR { 0%, 100% { background: #020208; } 50% { background: #500; } }
-
-        .damage-pop { position: absolute; font-size: 10px; font-weight: bold; color: #ff3333; text-shadow: 2px 2px #000; animation: pUp 0.60s forwards ease-out; z-index: 10; }
-        @keyframes pUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-30px) scale(1.3); } }
-
         .inv-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 4px 0; }
-        .inv-slot { background: #05050f; border: 2px solid #333; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; border-radius: 4px; position: relative; }
-        .common { border-color: #777; } .epic { border-color: #1f75fe; } .legend { border-color: #d4af37; box-shadow: inset 0 0 5px rgba(212,175,55,0.5); }
-        .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 7px; border-bottom: 1px solid #222235; }
-        .btn-small { padding: 5px 8px; font-family: 'Press Start 2P'; font-size: 6px; background: #32324e; color: #fff; border: 2px outset #555; cursor: pointer; border-radius: 3px; }
-        
-        .status-badge { position: absolute; top: -2px; right: -2px; font-size: 8px; background: #000; padding: 1px; border-radius: 3px; border: 1px solid red; }
+        .inv-slot { background: #05050f; border: 2px solid #333; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; border-radius: 4px; }
+        .legend { border-color: #d4af37; box-shadow: inset 0 0 8px rgba(212,175,55,0.5); }
     </style>
 </head>
 <body>
 
     <div id="game-container">
+        <div id="toast-container"></div>
 
-        <!-- ЭКРАН 1: ГЛАВНОЕ МЕНЮ -->
+        <!-- ГЛАВНОЕ МЕНЮ -->
         <div id="screen-menu" class="screen active">
             <div class="col-left" style="justify-content: center;">
-                <h1 style="font-size: 13px; color: #ffff55; line-height: 1.6;">MLBB RPG:<br>ГИПЕР-ЭВОЛЮЦИЯ</h1>
-                <p class="subtitle">Версия 9.0 (Движок Камеры и Стихии)</p>
+                <h1>MLBB RPG:<br>СИМФОНИЯ<br>ЭЛЕМЕНТОВ</h1>
+                <p style="font-size: 5px; color: #8a8ab0; margin-top: 10px;">ВЕРСИЯ 10.0 ULTIMATE</p>
+                <div style="font-size: 40px; margin: 20px 0; animation: float 3s infinite ease-in-out;">🌌</div>
             </div>
-            <div class="col-right" style="justify-content: center;">
-                <div style="font-size: 36px; margin: 15px 0; animation: floatEff 2s infinite ease-in-out;">🌋⚡🔮💎</div>
-                <button class="menu-btn" onclick="startAdventure()">ИССЛЕДОВАТЬ МИР</button>
-                <button class="menu-btn" onclick="switchScreen('screen-settings')">ВЫБОР ГЕРОЯ / НАСТРОЙКИ</button>
+            <div class="col-right" style="justify-content: center; gap: 8px;">
+                <button class="btn" onclick="Game.start()">НАЧАТЬ ПУТЬ</button>
+                <button class="btn" onclick="UI.switchScreen('screen-settings')">ГЕРОИ И НАСТРОЙКИ</button>
             </div>
         </div>
 
-        <!-- ЭКРАН 2: НАСТРОЙКИ И ПЕРСОНАЖИ -->
+        <!-- НАСТРОЙКИ -->
         <div id="screen-settings" class="screen">
             <div class="col-left">
-                <h1>НАСТРОЙКА ОТРЯДА</h1>
-                <div class="panel" style="text-align: left; margin: 0;">
-                    <div class="setting-row"><span>ГЕРОЙ:</span> <button id="cfg-hero" class="btn-small" style="color:#ffaa00;" onclick="toggleSetting('hero')">АЛУКАРД</button></div>
-                    <div class="setting-row"><span>РАЗРЕМЕНИЕ:</span> <button id="cfg-screen" class="btn-small" onclick="toggleSetting('screen')">ОКНО</button></div>
-                    <div class="setting-row"><span>ЗВУКИ БИТВЫ:</span> <button id="cfg-sound" class="btn-small" onclick="toggleSetting('sound')">ВКЛ</button></div>
-                    <div class="setting-row"><span>ЭМБИЕНТ:</span> <button id="cfg-music" class="btn-small" onclick="toggleSetting('music')">ВКЛ</button></div>
+                <h1>НАСТРОЙКИ</h1>
+                <div class="panel" style="text-align: left;">
+                    <div style="margin-bottom:10px;">ГЕРОЙ: <button class="btn" style="padding:6px; background:#32324e;" onclick="Game.nextHero()" id="cfg-hero">АЛУКАРД</button></div>
+                    <div style="margin-bottom:10px;">ЗВУК: <button class="btn" style="padding:6px; background:#32324e;" onclick="Audio.toggle('sfx')" id="cfg-sfx">ВКЛ</button></div>
+                    <div style="margin-bottom:10px;">МУЗЫКА: <button class="btn" style="padding:6px; background:#32324e;" onclick="Audio.toggle('music')" id="cfg-music">ВКЛ</button></div>
                 </div>
             </div>
             <div class="col-right">
-                <div class="panel" id="hero-desc-panel" style="font-size:5.5px; text-align:left; color:#bbb; line-height:1.5; min-height: 110px;"></div>
-                <button class="menu-btn" onclick="switchScreen('screen-menu')">ПРИМЕНИТЬ И ВЫЙТИ</button>
+                <div class="panel" id="hero-desc" style="font-size:6px; color:#bbb; line-height:1.6; flex-grow:1;"></div>
+                <button class="btn" onclick="UI.switchScreen(Game.state.isPlaying ? 'screen-adventure' : 'screen-menu')">НАЗАД</button>
             </div>
         </div>
 
-        <!-- ЭКРАН 3: КАРТА ИССЛЕДОВАНИЯ -->
+        <!-- КАРТА ИССЛЕДОВАНИЯ -->
         <div id="screen-adventure" class="screen">
             <div class="col-left">
-                <div>
-                    <h1 id="adv-location-title">ЛОКАЦИЯ 1</h1>
-                    <div style="display:flex; justify-content:space-between; font-size:6px; padding: 3px; background: #000; border: 1px solid #222;">
-                        <span>❤️ ОЗ: <span id="adv-hp" style="color:#ff5555;">100/100</span></span>
-                        <span>💎 ПЫЛЬ: <span id="adv-dust" style="color:#aa55ff;">0</span></span>
-                        <span>💰 ЗОЛОТО: <span id="adv-gold" style="color:#ffff55;">0</span></span>
-                    </div>
+                <div style="display:flex; justify-content:space-between; font-size:6px; padding:4px; background:#000; border:1px solid #333;">
+                    <span style="color:var(--hp)">❤️ <span id="adv-hp">100</span></span>
+                    <span style="color:var(--gold)">💰 <span id="adv-gold">0</span></span>
+                    <span style="color:var(--dust)">💎 <span id="adv-dust">0</span></span>
                 </div>
-                <!-- Контейнер Viewport скроллинга -->
-                <div id="viewport-container">
-                    <div id="map-grid"></div>
-                </div>
+                <div id="viewport-container"><div id="map-grid"></div></div>
             </div>
-
-            <div class="col-right">
-                <div style="font-size:5px; color:#8a8ab0; text-align:center; margin-bottom:2px;">
-                    Управление: Клавиши <b>W, A, S, D</b> или стрелки!
+            <div class="col-right" style="justify-content: flex-end;">
+                <div class="dpad-container">
+                    <div></div><button class="dpad-btn" onclick="Map.move(0, -1)">▲</button><div></div>
+                    <button class="dpad-btn" onclick="Map.move(-1, 0)">◄</button>
+                    <button class="dpad-btn" style="background:#4a235a; color:var(--accent); font-size:12px;" onclick="Camp.open()">🎒</button>
+                    <button class="dpad-btn" onclick="Map.move(1, 0)">►</button>
+                    <div></div><button class="dpad-btn" onclick="Map.move(0, 1)">▼</button><div></div>
                 </div>
-                <div>
-                    <div class="dpad-container">
-                        <div></div>
-                        <button class="dpad-btn" onclick="movePlayer(0, -1)">▲</button>
-                        <div></div>
-                        <button class="dpad-btn" onclick="movePlayer(-1, 0)">◄</button>
-                        <button class="dpad-btn" style="background:#4a235a; font-size:12px; color:#ffff55;" onclick="openCampHub()">🎒</button>
-                        <button class="dpad-btn" onclick="movePlayer(1, 0)">►</button>
-                        <div></div>
-                        <button class="dpad-btn" onclick="movePlayer(0, 1)">▼</button>
-                        <div></div>
-                    </div>
-                </div>
-                <button class="menu-btn" style="background:#151515; padding:6px;" onclick="switchScreen('screen-menu')">В МЕНЮ</button>
+                <button class="btn" style="background:#151515;" onclick="UI.switchScreen('screen-settings')">МЕНЮ</button>
             </div>
         </div>
 
-        <!-- ЭКРАН 4: ЛАГЕРЬ, КУЗНИЦА, РАЗБОР -->
+        <!-- ИНВЕНТАРЬ И ЛАГЕРЬ -->
         <div id="screen-camp" class="screen">
             <div class="col-left">
-                <h1 style="color:#55ff55;">СНАРЯЖЕНИЕ И РАЗБОР</h1>
-                <div class="panel" style="text-align: left; font-size: 6px; line-height: 1.5; margin: 0;">
-                    <div>КЛАСС: <span id="camp-hero" style="color:#6da5ff;">АЛУКАРД</span> (<span id="camp-lvl">1</span> УР)</div>
-                    <div>АТАКА: <span id="camp-dmg" style="color:#ff5555;">16</span> | МАГ. ПЫЛЬ: <span id="camp-dust" style="color:#aa55ff;">0</span></div>
-                    <div class="bar-container" style="height:6px; margin-top:4px;"><div id="camp-exp-fill" class="exp-fill"></div></div>
+                <h1 style="color:#55ff55;">СНАРЯЖЕНИЕ</h1>
+                <div class="panel" style="font-size:6px; line-height:1.6; text-align:left;">
+                    <div style="color:#fff;">КЛАСС: <span id="camp-hero" style="color:var(--mana)">-</span> (<span id="camp-lvl">1</span> УР)</div>
+                    <div>УРОН: <span id="camp-dmg" style="color:var(--hp)">0</span> | ОЗ: <span id="camp-hp" style="color:var(--hp)">0</span></div>
+                    <div class="bar-wrap"><div id="camp-exp" class="bar-fill" style="background:var(--dust); width:0%;"></div></div>
                 </div>
-                <div class="panel" style="margin-top: 4px; padding: 4px;">
-                    <div style="display:flex; justify-content: space-between;">
-                        <div class="inv-slot" id="slot-weapon" style="width:32%; font-size:6px; text-align:center;" onclick="unequipItem('weapon')">⚔️ Оружие</div>
-                        <div class="inv-slot" id="slot-armor" style="width:32%; font-size:6px; text-align:center;" onclick="unequipItem('armor')">🛡️ Доспех</div>
-                        <div class="inv-slot" id="slot-artifact" style="width:32%; font-size:6px; text-align:center;" onclick="unequipItem('artifact')">🔮 Реликт</div>
-                    </div>
+                <div style="display:flex; gap:4px;">
+                    <div class="inv-slot" id="eq-weap" style="width:33%; font-size:8px;" onclick="Camp.unequip('weapon')">⚔️</div>
+                    <div class="inv-slot" id="eq-arm" style="width:33%; font-size:8px;" onclick="Camp.unequip('armor')">🛡️</div>
+                    <div class="inv-slot" id="eq-art" style="width:33%; font-size:8px;" onclick="Camp.unequip('artifact')">🔮</div>
                 </div>
             </div>
-
             <div class="col-right">
-                <div class="panel" style="margin: 0;">
-                    <div style="font-size: 5px; color:#aaa; margin-bottom: 2px;">ИНВЕНТАРЬ (Клик - Надеть | Зажми на секунду - Разобрать):</div>
-                    <div class="inv-grid" id="inventory-container"></div>
+                <div class="panel" style="flex-grow:1;">
+                    <div style="font-size:5px; color:#aaa;">ИНВЕНТАРЬ (Зажми для разбора):</div>
+                    <div class="inv-grid" id="inv-list"></div>
                 </div>
-                <div style="display:flex; gap:4px; margin-top:4px;">
-                    <button class="card-btn attack" style="min-height:32px;" onclick="craftFromDust()">🔮 КРАФТ РЕЛИКТА (15 Пыли)</button>
-                    <button class="card-btn defend" style="min-height:32px;" onclick="buyHealPotion()">🧪 ЗЕЛЬЕ ОЗ (15💰)</button>
+                <div style="display:flex; gap:4px;">
+                    <button class="btn" style="color:var(--dust); padding:6px;" onclick="Camp.craft()">КРАФТ (15💎)</button>
+                    <button class="btn" style="color:var(--hp); padding:6px;" onclick="Camp.heal()">ЗЕЛЬЕ (15💰)</button>
                 </div>
-                <button class="menu-btn" style="background:#222; padding:6px;" onclick="switchScreen('screen-adventure')">ВЕРНУТЬСЯ НА КАРТУ</button>
+                <button class="btn" style="background:#222;" onclick="UI.switchScreen('screen-adventure')">НА КАРТУ</button>
             </div>
         </div>
 
-        <!-- ЭКРАН 5: БОЕВАЯ СИСТЕМА (ХОТКЕИ 1,2,3,4) -->
+        <!-- БОЕВАЯ АРЕНА -->
         <div id="screen-battle" class="screen">
             <div class="col-left">
-                <h1 style="color:#ff4444;">🔥 ЭЛИКТРИЧЕСКИЙ БОЙ 🔥</h1>
-                <div class="panel" id="battle-field" style="margin: 0; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;">
-                    <div style="display:flex; justify-content:space-between; font-size:6px; font-weight:bold;">
-                        <span id="bt-player-name" style="color:#6da5ff;">ГЕРОЙ</span>
-                        <div id="player-status-area"></div>
-                        <div id="enemy-status-area"></div>
-                        <span id="bt-enemy-name" style="color:#ff6d6d;">КРИП</span>
+                <h1 style="color:var(--hp);">БИТВА</h1>
+                <div class="panel" style="flex-grow:1; display:flex; flex-direction:column; justify-content:space-between;">
+                    <div style="display:flex; justify-content:space-between; font-size:6px;">
+                        <span id="bt-p-name" style="color:var(--mana)">ГЕРОЙ</span>
+                        <span id="bt-e-name" style="color:var(--hp)">ВРАГ</span>
                     </div>
                     <div class="stage-container">
-                        <div id="hero-sprite" class="sprite float-anim">⚔️</div>
-                        <div id="enemy-sprite" class="sprite float-anim">👾</div>
+                        <div id="hero-sprite" class="sprite anim-float">⚔️</div>
+                        <div id="enemy-sprite" class="sprite">👾</div>
                     </div>
-                    <div>
-                        <div style="font-size:5px; margin-bottom:1px; text-align:left;">ЖИЗНЬ ВРАГА: <span id="enemy-hp-text">50/50</span></div>
-                        <div class="bar-container" style="height:8px;"><div id="enemy-hp-fill" class="hp-fill"></div></div>
-                    </div>
+                    <div class="bar-wrap"><div id="bt-e-hp" class="bar-fill" style="background:var(--hp); width:100%;"></div></div>
                 </div>
             </div>
-
             <div class="col-right">
-                <div class="panel" style="padding:2px; margin-bottom:4px;"><div id="log">Загрузка боевого ИИ...</div></div>
-
-                <div class="panel" id="player-panel" style="margin: 0; padding: 4px;">
-                    <div style="display:flex; justify-content:space-between; font-size:6px; font-weight:bold; margin-bottom:2px;">
-                        <span>ЗДОРОВЬЕ: <span id="player-hp-text" style="color:#55ff55;">100/100</span></span>
-                        <span>ЭНЕРГИЯ: <span id="player-mana-text" style="color:#55aaff;">⚡ 3/3</span></span>
+                <div class="panel" id="log">Бой начинается...</div>
+                <div class="panel">
+                    <div style="display:flex; justify-content:space-between; font-size:6px; margin-bottom:2px;">
+                        <span style="color:var(--hp);">ОЗ: <span id="bt-p-hp-text">100</span></span>
+                        <span style="color:var(--mana);">⚡ <span id="bt-p-mana">3/3</span></span>
                     </div>
-                    <div class="bar-container" style="height:9px;">
-                        <div id="player-hp-fill" class="hp-fill" style="background-color:#22cc22;"></div>
-                        <div id="player-shield-fill" class="shield-fill" style="position:absolute; top:0; left:0;"></div>
+                    <div class="bar-wrap" style="margin-bottom:6px;">
+                        <div id="bt-p-hp" class="bar-fill" style="background:#22cc22; width:100%;"></div>
+                        <div id="bt-p-shield" class="bar-fill" style="background:#777; width:0%; position:absolute; top:0; left:0;"></div>
                     </div>
-                    <div class="cards" style="margin-top:6px;">
-                        <button class="card-btn attack" id="btn-atk1" onclick="useCombatSkill('atk1')">[1] Атака</button>
-                        <button class="card-btn attack" id="btn-atk2" onclick="useCombatSkill('atk2')">[2] Стихия</button>
-                        <button class="card-btn defend" id="btn-def" onclick="useCombatSkill('def')">[3] Щит</button>
-                        <button class="card-btn ultimate" id="btn-ult" onclick="useCombatSkill('ult')">[4] УЛЬТ</button>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                        <button class="btn" id="sk-1" style="margin:0; color:#fff;" onclick="Combat.useSkill(1)">[1] Атака</button>
+                        <button class="btn" id="sk-2" style="margin:0; color:var(--mana);" onclick="Combat.useSkill(2)">[2] Магия</button>
+                        <button class="btn" id="sk-3" style="margin:0; color:#aaa;" onclick="Combat.useSkill(3)">[3] Защита</button>
+                        <button class="btn" id="sk-4" style="margin:0; color:var(--accent);" onclick="Combat.useSkill(4)">[4] УЛЬТ</button>
                     </div>
                 </div>
             </div>
@@ -265,427 +223,343 @@ GAME_HTML = """
     </div>
 
     <script>
-        const heroList = ['алукард', 'мия', 'тигрил', 'госсен'];
-        const heroData = {
-            'алукард': { name: "АЛУКАРД", maxHp: 130, dmg: 18, sprite: "⚔️", desc: "* Класс: БОЕЦ. Эффект: Пассивный вампиризм 25% со всех атак и ульты." },
-            'мия': { name: "МИЯ", maxHp: 105, dmg: 24, sprite: "🏹", desc: "* Класс: СТРЕЛОК. Эффект: 30% шанс нанести х2 критический урон." },
-            'тигрил': { name: "ТИГРИЛ", maxHp: 180, dmg: 15, sprite: "🛡️", desc: "* Класс: ТАНК. Эффект: Начинает каждый бой со щитом 50 ОЗ. Эффективность блоков увеличена." },
-            'госсен': { name: "ГОССЕН", maxHp: 110, dmg: 22, sprite: "🗡️", desc: "* Класс: УБИЙЦА. Эффект: Быстрый набор энергии (+2 вместо +1). Урон ульты возрастает на раненых целях." }
-        };
-
-        let config = { sound: true, music: true, hero: 'алукард', fullscreen: false };
-        let player = { lvl: 1, exp: 0, nextExp: 90, gold: 60, dust: 5, baseDmg: 18, hp: 130, maxHp: 130, mana: 3, maxMana: 4, shield: 0, weapon: null, armor: null, artifact: null, status: null };
-        let inventory = [{ type: 'potion', name: 'Зелье ОЗ', icon: '🧪', rare: 'common' }];
-        let currentZone = 0; let playerX = 2; let playerY = 2;
-        let combatActive = false; let currentCreep = null;
-        let gameState = { isGameOver: false, currentTurn: 'player' };
+        /**
+         * v10.0 "Симфония Элементов" - Идеальная организация
+         */
         
-        // МЕГА-КАРТА 20х20 (Сгенерированная матрица для расширения)
-        let megaMap = [];
-
-        const lootTable = [
-            { type: 'weapon', name: 'Меч Империи', icon: '🗡️', stat: 10, rare: 'common' },
-            { type: 'weapon', name: 'Копьё Дракона', icon: '🔱', stat: 22, rare: 'epic' },
-            { type: 'weapon', name: 'Клинок Отчаяния', icon: '⚔️', stat: 50, rare: 'legend' },
-            { type: 'armor', name: 'Кираса воина', icon: '👕', stat: 8, rare: 'common' },
-            { type: 'armor', name: 'Доспех Демона', icon: '🛡️', stat: 20, rare: 'epic' },
-            { type: 'armor', name: 'Бессмертие', icon: '💎', stat: 45, rare: 'legend' },
-            { type: 'artifact', name: 'Амулет Силы', icon: '📿', stat: 30, rare: 'common' },
-            { type: 'artifact', name: 'Око Дракона', icon: '🔮', stat: 65, rare: 'epic' },
-            { type: 'artifact', name: 'Сердце Анубиса', icon: '👑', stat: 120, rare: 'legend' }
-        ];
-
-        const zones = [
-            { title: "Запретный Легион Монии", tileClass: "tile-floor", wallClass: "tile-wall", wallIcon: "🌲", monsterPool: [{ name: "Гоблин-Поджигатель", hp: 55, sprite: "👺", minDmg: 6, maxDmg: 10, exp: 50, gold: 20, element: 'fire' }] },
-            { title: "Ледяная Бездна Ностальгии", tileClass: "tile-mine", wallClass: "tile-wall", wallIcon: "❄️", monsterPool: [{ name: "Снежный Призрак", hp: 95, sprite: "👻", minDmg: 10, maxDmg: 16, exp: 80, gold: 35, element: 'ice' }] },
-            { title: "Грозовые Кряжи Кадиэ", tileClass: "tile-waste", wallClass: "tile-wall", wallIcon: "⚡", monsterPool: [{ name: "Элементаль Искр", hp: 160, sprite: "👾", minDmg: 16, maxDmg: 26, exp: 150, gold: 55, element: 'shock' }] },
-            { title: "🌋 Вулкан Ужаса Пекла", tileClass: "tile-abyss", wallClass: "tile-wall", wallIcon: "🔥", monsterPool: [{ name: "ТАМУЗ ИСТИННЫЙ", hp: 750, sprite: "👑", minDmg: 50, maxDmg: 70, exp: 9999, gold: 1000, element: 'fire', isBoss: true }] }
-        ];
-
-        let audioCtx = null; let musicTimer = null; let musicTicks = 0;
-        function initAudio() { if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); runMusicEngine(); } }
-        function makeTone(freq, wave, len, vol = 0.015) {
-            if (!config.sound || !audioCtx) return;
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
-            osc.type = wave; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + len);
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.start(); osc.stop(audioCtx.currentTime + len);
-        }
-        function runMusicEngine() {
-            if (musicTimer) clearInterval(musicTimer);
-            musicTimer = setInterval(() => {
-                if (!config.music || !audioCtx || combatActive) return;
-                let scale = [261.63, 311.13, 392.00, 349.23];
-                let note = scale[musicTicks % scale.length];
-                makeTone(note, 'triangle', 0.18, 0.005); musicTicks++;
-            }, 350);
-        }
-
-        const audioPack = {
-            click: () => makeTone(600, 'sine', 0.05, 0.02),
-            step: () => makeTone(120, 'triangle', 0.06, 0.02),
-            loot: () => { makeTone(440, 'sine', 0.08, 0.02); setTimeout(() => makeTone(880, 'sine', 0.15, 0.02), 50); },
-            heal: () => { makeTone(350, 'sine', 0.1, 0.02); setTimeout(() => makeTone(700, 'sine', 0.2, 0.02), 50); },
-            hit: () => makeTone(180, 'sawtooth', 0.08, 0.02),
-            block: () => makeTone(400, 'sine', 0.08, 0.03),
-            lvlUp: () => { [523, 659, 783, 1046].forEach((f, i) => setTimeout(() => makeTone(f, 'sine', 0.12, 0.02), i*60)); }
+        // --- 1. ДАННЫЕ И БАЗА ---
+        const DB = {
+            heroes: {
+                'алукард': { name: "АЛУКАРД", hp: 140, dmg: 18, sprite: "⚔️", desc: "БОЕЦ. Вампиризм с атак. Магия: Огонь." },
+                'мия': { name: "МИЯ", hp: 110, dmg: 25, sprite: "🏹", desc: "СТРЕЛОК. Шанс крита 30%. Магия: Лед (Стан)." },
+                'тигрил': { name: "ТИГРИЛ", hp: 200, dmg: 14, sprite: "🛡️", desc: "ТАНК. Начинает со щитом. Усиленные блоки." },
+                'госсен': { name: "ГОССЕН", hp: 120, dmg: 22, sprite: "🗡️", desc: "УБИЙЦА. Быстрый реген маны. Добив. ульта." }
+            },
+            loot: [
+                { type: 'weapon', name: 'Меч Охотника', icon: '🗡️', stat: 12, rare: 'common' },
+                { type: 'weapon', name: 'Клинок Отчаяния', icon: '⚔️', stat: 45, rare: 'legend' },
+                { type: 'armor', name: 'Кираса', icon: '👕', stat: 10, rare: 'common' },
+                { type: 'armor', name: 'Крылья Королевы', icon: '🦇', stat: 35, rare: 'legend' },
+                { type: 'artifact', name: 'Амулет', icon: '📿', stat: 30, rare: 'common' },
+                { type: 'artifact', name: 'Око Дракона', icon: '🔮', stat: 100, rare: 'legend' }
+            ],
+            zones: [
+                { name: "Темный Лес", wall: "🌲", floor: "#121e12", mobs: [{ name: "Гоблин", hp: 60, dmg: [6, 12], sprite: "👺", elem: 'fire' }] },
+                { name: "Снежный Пик", wall: "❄️", floor: "#1a2a3a", mobs: [{ name: "Йети", hp: 120, dmg: [12, 20], sprite: "⛄", elem: 'ice' }] },
+                { name: "Вулкан Ужаса", wall: "🌋", floor: "#3a1a1a", mobs: [{ name: "ЛОРД", hp: 600, dmg: [40, 60], sprite: "👑", elem: 'fire' }] }
+            ]
         };
 
-        function switchScreen(id) {
-            initAudio(); audioPack.click();
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            if(id === 'screen-settings') updateSettingsUI();
-        }
-
-        function updateSettingsUI() {
-            let h = heroData[config.hero];
-            document.getElementById('cfg-hero').innerText = h.name;
-            document.getElementById('hero-desc-panel').innerHTML = `${h.desc}<br><br><span style='color:#ff5555'>Макс ОЗ: ${h.maxHp}</span><br><span style='color:#ffaa00'>Атака: ${h.dmg}</span>`;
-        }
-
-        function toggleSetting(key) {
-            initAudio(); audioPack.click();
-            if (key === 'sound' || key === 'music') { config[key] = !config[key]; document.getElementById(`cfg-${key}`).innerText = config[key] ? "ВКЛ" : "ВЫКЛ"; }
-            else if (key === 'screen') {
-                config.fullscreen = !config.fullscreen; let c = document.getElementById('game-container');
-                if (config.fullscreen) { c.classList.add('fullscreen'); document.getElementById('cfg-screen').innerText = "ВЕСЬ ЭКРАН"; if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); }
-                else { c.classList.remove('fullscreen'); document.getElementById('cfg-screen').innerText = "ОКНО"; if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen(); }
-            } else if (key === 'hero') {
-                let idx = heroList.indexOf(config.hero); config.hero = heroList[(idx + 1) % heroList.length];
-                updateSettingsUI();
-            }
-        }
-
-        function getDynamicMaxHp() {
-            let base = heroData[config.hero].maxHp + (player.lvl - 1) * 16;
-            if (player.artifact) base += player.artifact.stat;
-            return base;
-        }
-
-        // ГЕНЕРАТОР МЕГА-КАРТЫ 20х20
-        function generateMegaMap(zoneIdx) {
-            let size = 20; megaMap = [];
-            for (let y = 0; y < size; y++) {
-                let row = [];
-                for (let x = 0; x < size; x++) {
-                    if (x === 0 || y === 0 || x === size - 1 || y === size - 1) { row.push(1); } // Границы
-                    else {
-                        let r = Math.random();
-                        if (r < 0.18) row.push(1); // Стены
-                        else if (r < 0.24) row.push(2); // Монстры
-                        else if (r < 0.28) row.push(4); // Золото/сундуки
-                        else if (r < 0.30) row.push(5); // Источник ОЗ
-                        else row.push(0); // Пол
+        // --- 2. АУДИО ДВИЖОК (СЕКВЕНСОР) ---
+        const Audio = {
+            ctx: null, sfx: true, music: true, seqTimer: null, step: 0, currentTrack: null,
+            notes: { E3: 164.8, G3: 196, A3: 220, C4: 261.6, D4: 293.7, E4: 329.6, F4: 349.2, G4: 392, A4: 440 },
+            tracks: {
+                explore: { tempo: 500, seq: ['A3', 'C4', 'E4', 'A4', 'G4', 'E4', 'C4', 'E4'], type: 'sine' },
+                battle: { tempo: 220, seq: ['E3', 'E3', 'F4', 'E3', 'G3', 'E3', 'D4', 'E3'], type: 'sawtooth' }
+            },
+            init() { 
+                if (!this.ctx) { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+            },
+            toggle(type) { this[type] = !this[type]; UI.updateSettings(); if(type==='music') this.playTrack(this.currentTrackName); },
+            playTone(freq, type, duration, vol=0.03) {
+                if (!this.sfx || !this.ctx) return; this.init();
+                let osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+                osc.type = type; osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + duration);
+            },
+            playTrack(name) {
+                this.currentTrackName = name; clearInterval(this.seqTimer); this.step = 0;
+                if (!this.music || !name) return; this.init();
+                let tr = this.tracks[name]; this.currentTrack = tr;
+                this.seqTimer = setInterval(() => {
+                    let note = tr.seq[this.step % tr.seq.length];
+                    if(note && this.music) {
+                        let osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+                        osc.type = tr.type; osc.frequency.value = this.notes[note];
+                        gain.gain.setValueAtTime(0.015, this.ctx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + (tr.tempo/1000));
+                        osc.connect(gain); gain.connect(this.ctx.destination);
+                        osc.start(); osc.stop(this.ctx.currentTime + (tr.tempo/1000));
                     }
-                }
-                megaMap.push(row);
+                    this.step++;
+                }, tr.tempo);
+            },
+            fx: {
+                step: () => Audio.playTone(120, 'triangle', 0.05, 0.01),
+                hit: () => Audio.playTone(150, 'square', 0.1, 0.03),
+                loot: () => { Audio.playTone(600, 'sine', 0.1); setTimeout(()=>Audio.playTone(800, 'sine', 0.2), 100); },
+                err: () => Audio.playTone(100, 'sawtooth', 0.2, 0.03)
             }
-            // Гарантируем выход и точку старта
-            megaMap[18][18] = 3; 
-            megaMap[2][2] = 0;
-            playerX = 2; playerY = 2;
-        }
+        };
 
-        function startAdventure() {
-            let data = heroData[config.hero];
-            player.lvl = 1; player.exp = 0; player.nextExp = 90; player.gold = 60; player.dust = 5;
-            player.baseDmg = data.dmg; player.weapon = null; player.armor = null; player.artifact = null;
-            player.maxHp = getDynamicMaxHp(); player.hp = player.maxHp;
-            inventory = [{ type: 'potion', name: 'Зелье ОЗ', icon: '🧪', rare: 'common' }];
-            loadZone(0);
-        }
-
-        function loadZone(idx) {
-            currentZone = idx; if (currentZone >= zones.length) { alert("🏆 ПОБЕДА! Вы прошли Грандиозную Сагу и спасли вселенную MLBB!"); switchScreen('screen-menu'); return; }
-            generateMegaMap(currentZone); renderViewport(); switchScreen('screen-adventure');
-        }
-
-        // РЕНДЕР ПЛАВАЮЩЕГО VIEWPORT (7x7 Вокруг Игрока)
-        function renderViewport() {
-            player.maxHp = getDynamicMaxHp();
-            document.getElementById('adv-location-title').innerText = `${currentZone+1}/${zones.length}: ${zones[currentZone].title}`;
-            document.getElementById('adv-hp').innerText = `${player.hp}/${player.maxHp}`;
-            document.getElementById('adv-gold').innerText = player.gold;
-            document.getElementById('adv-dust').innerText = player.dust;
+        // --- 3. СОСТОЯНИЕ ИГРЫ ---
+        const Game = {
+            state: { isPlaying: false, hero: 'алукард', zIdx: 0 },
+            player: { lvl: 1, exp: 0, nExp: 100, hp: 0, maxHp: 0, mana: 3, gold: 50, dust: 5, eq: {weapon:null, armor:null, artifact:null}, inv: [] },
             
-            let grid = document.getElementById('map-grid'); grid.innerHTML = "";
-            let viewRadius = 3; // Окно 7х7 (текущие координаты -3 до +3)
-            let z = zones[currentZone];
+            getHero() { return DB.heroes[this.state.hero]; },
+            getMaxHp() { let b = this.getHero().hp + (this.player.lvl-1)*20; if(this.player.eq.artifact) b+=this.player.eq.artifact.stat; return b; },
+            getDmg() { let b = this.getHero().dmg + (this.player.lvl-1)*5; if(this.player.eq.weapon) b+=this.player.eq.weapon.stat; return b; },
+            
+            nextHero() { 
+                let keys = Object.keys(DB.heroes); 
+                this.state.hero = keys[(keys.indexOf(this.state.hero) + 1) % keys.length]; 
+                Audio.init(); UI.updateSettings(); 
+            },
+            
+            start() {
+                Audio.init(); this.state.isPlaying = true; this.state.zIdx = 0;
+                this.player = { lvl: 1, exp: 0, nExp: 100, mana: 3, gold: 30, dust: 5, eq:{weapon:null, armor:null, artifact:null}, inv: [] };
+                this.player.maxHp = this.getMaxHp(); this.player.hp = this.player.maxHp;
+                Map.generate(this.state.zIdx); UI.switchScreen('screen-adventure');
+                UI.toast("Глава 1: Путь начинается", "#ffff55");
+            }
+        };
 
-            for (let y = playerY - viewRadius; y <= playerY + viewRadius; y++) {
-                for (let x = playerX - viewRadius; x <= playerX + viewRadius; x++) {
-                    let cell = document.createElement('div');
-                    // Если выходим за пределы массива мега-карты
-                    if (y < 0 || y >= 20 || x < 0 || x >= 20) {
-                        cell.className = "map-tile tile-wall"; cell.innerText = z.wallIcon;
-                    } else {
-                        let code = megaMap[y][x];
-                        cell.className = "map-tile " + z.tileClass;
-                        if (code === 1) { cell.className = "map-tile " + z.wallClass; cell.innerText = z.wallIcon; }
-                        else if (code === 2) cell.innerText = "👾"; 
-                        else if (code === 3) cell.innerText = "🎯";
-                        else if (code === 4) cell.innerText = "🎁"; 
-                        else if (code === 5) cell.innerText = " fountains ⛲";
-                        
-                        if (x === playerX && y === playerY) {
-                            cell.innerText = heroData[config.hero].sprite;
-                            cell.style.background = "#4a4a00";
+        // --- 4. ГЕНЕРАЦИЯ И КАРТА ---
+        const Map = {
+            grid: [], size: 20, px: 2, py: 2,
+            generate(zIdx) {
+                this.grid = []; Audio.playTrack('explore');
+                for(let y=0; y<this.size; y++) {
+                    let r = [];
+                    for(let x=0; x<this.size; x++) {
+                        if(x===0||y===0||x===this.size-1||y===this.size-1) r.push(1); // Стена
+                        else {
+                            let rnd = Math.random();
+                            if(rnd<0.15) r.push(1); // Препятствие
+                            else if(rnd<0.22) r.push(2); // Враг
+                            else if(rnd<0.26) r.push(4); // Лут
+                            else if(rnd<0.27) r.push(5); // Хилка
+                            else if(rnd<0.28) r.push(6); // Торговец
+                            else r.push(0); // Пол
                         }
                     }
-                    grid.appendChild(cell);
+                    this.grid.push(r);
                 }
-            }
-        }
+                this.grid[this.size-2][this.size-2] = 3; // Выход
+                this.grid[2][2] = 0; this.px = 2; this.py = 2;
+                this.draw();
+            },
+            draw() {
+                let html = ""; let z = DB.zones[Game.state.zIdx];
+                let maxHp = Game.getMaxHp(); if(Game.player.hp > maxHp) Game.player.hp = maxHp;
+                
+                document.getElementById('adv-hp').innerText = `${Game.player.hp}/${maxHp}`;
+                document.getElementById('adv-gold').innerText = Game.player.gold;
+                document.getElementById('adv-dust').innerText = Game.player.dust;
 
-        function movePlayer(dx, dy) {
-            if (combatActive) return; initAudio();
-            let tx = playerX + dx, ty = playerY + dy;
-            if (tx >= 0 && tx < 20 && ty >= 0 && ty < 20 && megaMap[ty][tx] !== 1) {
-                playerX = tx; playerY = ty; audioPack.step();
-                let trg = megaMap[playerY][playerX];
-                if (trg === 2) { triggerBattle(); return; }
-                if (trg === 3) { alert("🎯 Портал переносит вас глубже..."); loadZone(currentZone + 1); return; }
-                if (trg === 4) { 
-                    let g = Math.floor(Math.random()*25)+20; player.gold += g; 
-                    let d = Math.floor(Math.random()*3)+1; player.dust += d;
-                    audioPack.loot(); alert(`🎁 Клад! Найдено: +${g}💰 и +${d} Магической пыли!`); 
-                    megaMap[playerY][playerX] = 0; 
+                for(let y = this.py - 3; y <= this.py + 3; y++) {
+                    for(let x = this.px - 3; x <= this.px + 3; x++) {
+                        let dist = Math.max(Math.abs(x - this.px), Math.abs(y - this.py));
+                        let dimClass = dist === 3 ? "dimmed-3" : (dist === 2 ? "dimmed-2" : (dist === 1 ? "dimmed-1" : ""));
+                        
+                        if(y<0||y>=this.size||x<0||x>=this.size) { html += `<div class="map-tile tile-wall ${dimClass}">${z.wall}</div>`; continue; }
+                        
+                        let v = this.grid[y][x]; let cnt = "", cls = dimClass;
+                        if(x===this.px && y===this.py) { cnt = Game.getHero().sprite; cls = ""; }
+                        else if(v===1) { cnt = z.wall; cls += " tile-wall"; }
+                        else if(v===2) cnt = "👾"; else if(v===3) cnt = "🌀"; 
+                        else if(v===4) cnt = "🎁"; else if(v===5) cnt = "⛲"; else if(v===6) cnt = "🛒";
+
+                        html += `<div class="map-tile ${cls}" style="background:${v===1?'':z.floor}">${cnt}</div>`;
+                    }
                 }
-                if (trg === 5) { player.hp = player.maxHp = getDynamicMaxHp(); audioPack.heal(); alert("⛲ Родник полностью исцелил силы!"); megaMap[playerY][playerX] = 0; }
-                renderViewport();
+                document.getElementById('map-grid').innerHTML = html;
+            },
+            move(dx, dy) {
+                let tx = this.px+dx, ty = this.py+dy;
+                if(this.grid[ty][tx] !== 1) {
+                    this.px = tx; this.py = ty; Audio.fx.step();
+                    let tile = this.grid[ty][tx];
+                    if(tile === 2) return Combat.start();
+                    if(tile === 3) { 
+                        Game.state.zIdx++; 
+                        if(Game.state.zIdx >= DB.zones.length) { alert("ПОБЕДА!"); return UI.switchScreen('screen-menu'); }
+                        UI.toast("Вы спустились глубже...", "#aa55ff"); this.generate(Game.state.zIdx); return; 
+                    }
+                    if(tile === 4) { 
+                        let g = 15 + Math.floor(Math.random()*15); Game.player.gold += g; Game.player.dust += 2;
+                        UI.toast(`Найдено: ${g}💰 и 2💎`, "#ffff55"); Audio.fx.loot(); this.grid[ty][tx]=0; 
+                    }
+                    if(tile === 5) { Game.player.hp = Game.getMaxHp(); UI.toast("Здоровье восстановлено!", "#55ff55"); Audio.fx.loot(); this.grid[ty][tx]=0; }
+                    if(tile === 6) { this.shop(); this.grid[ty][tx]=0; }
+                    this.draw();
+                }
+            },
+            shop() {
+                if(Game.player.gold >= 40) {
+                    Game.player.gold -= 40; let item = DB.loot[Math.floor(Math.random()*DB.loot.length)];
+                    Game.player.inv.push(item); UI.toast(`Торговец продал: ${item.icon} ${item.name}`, "#ffaa00"); Audio.fx.loot();
+                } else { UI.toast("Торговец: Нужно 40💰!", "#ff5555"); Audio.fx.err(); }
             }
-        }
+        };
 
-        // SMART КЛАВИАТУРА И ХОТКЕИ КЛАССОВ
-        window.addEventListener('keydown', (e) => {
-            let advActive = document.getElementById('screen-adventure').classList.contains('active');
-            let btlActive = document.getElementById('screen-battle').classList.contains('active');
+        // --- 5. ЛАГЕРЬ И ИНВЕНТАРЬ ---
+        const Camp = {
+            open() {
+                let p = Game.player; p.maxHp = Game.getMaxHp();
+                document.getElementById('camp-hero').innerText = Game.getHero().name;
+                document.getElementById('camp-lvl').innerText = p.lvl;
+                document.getElementById('camp-dmg').innerText = Game.getDmg();
+                document.getElementById('camp-hp').innerText = `${p.hp}/${p.maxHp}`;
+                document.getElementById('camp-exp').style.width = `${(p.exp/p.nExp)*100}%`;
+                
+                ['weapon','armor','artifact'].forEach(t => {
+                    document.getElementById(`eq-${t.substring(0,3)}`).innerHTML = p.eq[t] ? `<div style='font-size:16px'>${p.eq[t].icon}</div><div style='font-size:5px'>+${p.eq[t].stat}</div>` : (t==='weapon'?'⚔️':t==='armor'?'🛡️':'🔮');
+                });
+
+                let html = "";
+                p.inv.forEach((it, i) => { html += `<div class="inv-slot ${it.rare}" onmousedown="Camp.press(${i})" onmouseup="Camp.release()" onmouseleave="Camp.release()" ontouchstart="Camp.press(${i})" ontouchend="Camp.release()">${it.icon}</div>`; });
+                document.getElementById('inv-list').innerHTML = html;
+                UI.switchScreen('screen-camp');
+            },
+            equip(idx) {
+                Audio.fx.step(); let it = Game.player.inv[idx];
+                if(Game.player.eq[it.type]) Game.player.inv.push(Game.player.eq[it.type]);
+                Game.player.eq[it.type] = it; Game.player.inv.splice(idx, 1);
+                UI.toast(`Надето: ${it.name}`, "#55ff55"); this.open();
+            },
+            unequip(type) { if(Game.player.eq[type]) { Game.player.inv.push(Game.player.eq[type]); Game.player.eq[type] = null; Audio.fx.step(); this.open(); } },
             
-            if (advActive) {
-                if (e.key === 'w' || e.key === 'ArrowUp') movePlayer(0, -1);
-                if (e.key === 's' || e.key === 'ArrowDown') movePlayer(0, 1);
-                if (e.key === 'a' || e.key === 'ArrowLeft') movePlayer(-1, 0);
-                if (e.key === 'd' || e.key === 'ArrowRight') movePlayer(1, 0);
+            pTimer: null,
+            press(idx) { this.pTimer = setTimeout(() => { Game.player.inv.splice(idx,1); Game.player.dust += 5; UI.toast("Разобрано! +5💎", "#aa55ff"); Audio.fx.loot(); this.open(); }, 600); },
+            release() { if(this.pTimer){ clearTimeout(this.pTimer); this.pTimer=null; this.equip(arguments[0] || 0); } }, // Упрощенный хак для тапов
+            
+            craft() { if(Game.player.dust>=15){ Game.player.dust-=15; let it = DB.loot[Math.floor(Math.random()*DB.loot.length)]; Game.player.inv.push(it); UI.toast(`Скрафчено: ${it.icon}`, "#aa55ff"); Audio.fx.loot(); this.open(); } else { UI.toast("Мало пыли!", "#ff4444"); Audio.fx.err(); } },
+            heal() { if(Game.player.gold>=15){ Game.player.gold-=15; Game.player.hp = Game.getMaxHp(); UI.toast("Вы исцелены!", "#55ff55"); Audio.fx.loot(); this.open(); } else { UI.toast("Мало золота!", "#ff4444"); Audio.fx.err(); } }
+        };
+
+        // --- 6. БОЕВАЯ СИСТЕМА ---
+        const Combat = {
+            enemy: null, shield: 0, turn: 'player', logBox: null,
+            start() {
+                Audio.playTrack('battle'); this.logBox = document.getElementById('log'); this.logBox.innerHTML = "";
+                let pool = DB.zones[Game.state.zIdx].mobs;
+                this.enemy = { ...pool[Math.floor(Math.random()*pool.length)] }; this.enemy.maxHp = this.enemy.hp;
+                
+                Game.player.mana = 3; this.shield = (Game.state.hero === 'тигрил') ? 50 : 0; this.turn = 'player';
+                
+                document.getElementById('bt-p-name').innerText = Game.getHero().name;
+                document.getElementById('hero-sprite').innerText = Game.getHero().sprite;
+                document.getElementById('bt-e-name').innerText = this.enemy.name;
+                document.getElementById('enemy-sprite').innerText = this.enemy.sprite;
+                
+                this.updateUI(); UI.switchScreen('screen-battle'); this.log("Битва началась!", "#ffff55");
+            },
+            updateUI() {
+                let p = Game.player; p.maxHp = Game.getMaxHp();
+                document.getElementById('bt-p-hp-text').innerText = `${p.hp}/${p.maxHp}`;
+                document.getElementById('bt-p-hp').style.width = `${(p.hp/p.maxHp)*100}%`;
+                document.getElementById('bt-p-shield').style.width = `${(this.shield/p.maxHp)*100}%`;
+                document.getElementById('bt-p-mana').innerText = `${p.mana}/4`;
+                document.getElementById('bt-e-hp').style.width = `${(this.enemy.hp/this.enemy.maxHp)*100}%`;
+                
+                let my = (this.turn === 'player');
+                document.getElementById('sk-1').disabled = !my;
+                document.getElementById('sk-2').disabled = !my || p.mana < 1;
+                document.getElementById('sk-3').disabled = !my || p.mana < 1;
+                document.getElementById('sk-4').disabled = !my || p.mana < 3;
+            },
+            log(msg, col="#aaa") { this.logBox.innerHTML += `<div style="color:${col}; margin-bottom:2px;">> ${msg}</div>`; this.logBox.scrollTop = this.logBox.scrollHeight; },
+            anim(id, cls) { let el = document.getElementById(id); el.classList.remove('anim-float'); el.classList.add(cls); setTimeout(()=>{ el.classList.remove(cls); el.classList.add('anim-float'); }, 300); },
+            
+            useSkill(type) {
+                if(this.turn !== 'player') return;
+                let dmg = Game.getDmg(), p = Game.player, hero = Game.state.hero;
+                this.anim('hero-sprite', 'anim-atk-l'); Audio.fx.hit();
+
+                if(type===1) {
+                    let d = Math.floor(dmg*(hero==='мия'&&Math.random()<0.3 ? 2 : 1));
+                    this.enemy.hp -= d; p.mana = Math.min(4, p.mana+(hero==='госсен'?2:1));
+                    if(hero==='алукард') { let l=Math.floor(d*0.3); p.hp=Math.min(p.maxHp, p.hp+l); this.log(`Вампиризм: +${l}ОЗ`, "#55ff55"); }
+                    this.log(`Атака: -${d} урона`, "#ff5555");
+                }
+                else if(type===2) {
+                    p.mana -= 1; let d = Math.floor(dmg*1.5); this.enemy.hp -= d;
+                    this.log(`Магия: -${d} урона`, "var(--mana)");
+                }
+                else if(type===3) {
+                    p.mana -= 1; let s = Math.floor((20 + (p.eq.armor?p.eq.armor.stat:0))*(hero==='тигрил'?2:1.2)); this.shield += s;
+                    this.log(`Щит активирован: +${s}`, "#aaaaaa"); Audio.fx.step();
+                }
+                else if(type===4) {
+                    p.mana -= 3; let d = Math.floor(dmg*3); if(hero==='госсен' && this.enemy.hp < this.enemy.maxHp/2) d = Math.floor(d*1.5);
+                    this.enemy.hp -= d; this.log(`УЛЬТИМЕЙТ: -${d} урона!`, "var(--accent)");
+                }
+
+                if(this.enemy.hp <= 0) return this.end(true);
+                this.turn = 'enemy'; this.updateUI(); setTimeout(() => this.enemyTurn(), 800);
+            },
+            enemyTurn() {
+                this.anim('enemy-sprite', 'anim-atk-r');
+                let d = this.enemy.dmg[0] + Math.floor(Math.random()*(this.enemy.dmg[1]-this.enemy.dmg[0]));
+                
+                if(this.shield > 0) {
+                    if(this.shield >= d) { this.shield -= d; d = 0; this.log("Урон полностью заблокирован!", "#aaa"); }
+                    else { d -= this.shield; this.shield = 0; }
+                }
+                if(d > 0) { Game.player.hp -= d; this.log(`${this.enemy.name} бьет: -${d} ОЗ`, "#ff4444"); Audio.fx.err(); }
+                
+                if(Game.player.hp <= 0) return this.end(false);
+                this.turn = 'player'; this.updateUI();
+            },
+            end(win) {
+                if(win) {
+                    let xp = 40 + Game.state.zIdx*20; let g = 10 + Math.floor(Math.random()*15);
+                    Game.player.exp += xp; Game.player.gold += g;
+                    UI.toast(`Победа! +${xp}XP | +${g}💰`, "#ffff55");
+                    if(Game.player.exp >= Game.player.nExp) {
+                        Game.player.lvl++; Game.player.exp = 0; Game.player.nExp = Math.floor(Game.player.nExp*1.5);
+                        Game.player.hp = Game.getMaxHp(); UI.toast("УРОВЕНЬ ПОВЫШЕН!", "#aa55ff");
+                    }
+                    Map.grid[Map.py][Map.px] = 0; Map.draw(); Audio.playTrack('explore'); UI.switchScreen('screen-adventure');
+                } else {
+                    alert("ВЫ ПОГИБЛИ. Мир поглощен Бездной."); Audio.playTrack(null); UI.switchScreen('screen-menu');
+                }
             }
-            if (btlActive) {
-                if (e.key === '1') useCombatSkill('atk1');
-                if (e.key === '2') useCombatSkill('atk2');
-                if (e.key === '3') useCombatSkill('def');
-                if (e.key === '4') useCombatSkill('ult');
+        };
+
+        // --- 7. UI ДВИЖОК ---
+        const UI = {
+            switchScreen(id) {
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById(id).classList.add('active'); Audio.fx.step();
+                if(id==='screen-settings') this.updateSettings();
+            },
+            updateSettings() {
+                let h = Game.getHero();
+                document.getElementById('cfg-hero').innerText = h.name;
+                document.getElementById('cfg-sfx').innerText = Audio.sfx ? "ВКЛ" : "ВЫКЛ";
+                document.getElementById('cfg-music').innerText = Audio.music ? "ВКЛ" : "ВЫКЛ";
+                document.getElementById('hero-desc').innerHTML = `${h.desc}<br><br><span style='color:var(--hp)'>Баз. ОЗ: ${h.hp}</span><br><span style='color:var(--accent)'>Баз. Урон: ${h.dmg}</span>`;
+            },
+            toast(msg, color="#fff") {
+                let box = document.getElementById('toast-container');
+                let t = document.createElement('div'); t.className = 'toast';
+                t.style.borderColor = color; t.innerText = msg;
+                box.appendChild(t); setTimeout(() => t.remove(), 2400);
+            }
+        };
+
+        // УПРАВЛЕНИЕ КЛАВИАТУРОЙ
+        window.addEventListener('keydown', (e) => {
+            if(document.getElementById('screen-adventure').classList.contains('active')) {
+                if(['w','ArrowUp'].includes(e.key)) Map.move(0, -1);
+                if(['s','ArrowDown'].includes(e.key)) Map.move(0, 1);
+                if(['a','ArrowLeft'].includes(e.key)) Map.move(-1, 0);
+                if(['d','ArrowRight'].includes(e.key)) Map.move(1, 0);
+            } else if(document.getElementById('screen-battle').classList.contains('active')) {
+                if(['1','2','3','4'].includes(e.key)) Combat.useSkill(parseInt(e.key));
             }
         });
 
-        function openCampHub() {
-            switchScreen('screen-camp'); player.maxHp = getDynamicMaxHp();
-            document.getElementById('camp-hero').innerText = config.hero.toUpperCase();
-            document.getElementById('camp-lvl').innerText = player.lvl; 
-            document.getElementById('camp-gold').innerText = player.gold;
-            document.getElementById('camp-dust').innerText = player.dust;
-            document.getElementById('camp-exp-fill').style.width = `${(player.exp / player.nextExp)*100}%`;
-            
-            let wStat = player.weapon ? player.weapon.stat : 0; 
-            document.getElementById('camp-dmg').innerText = player.baseDmg + wStat;
-            document.getElementById('slot-weapon').innerText = player.weapon ? `${player.weapon.icon} +${player.weapon.stat}` : '⚔️ Оружие';
-            document.getElementById('slot-armor').innerText = player.armor ? `${player.armor.icon} +${player.armor.stat}` : '🛡️ Доспех';
-            document.getElementById('slot-artifact').innerText = player.artifact ? `${player.artifact.icon} +${player.artifact.stat} ОЗ` : '🔮 Реликт';
-            
-            let box = document.getElementById('inventory-container'); box.innerHTML = "";
-            inventory.forEach((item, i) => {
-                let slot = document.createElement('div'); slot.className = `inv-slot ${item.rare}`;
-                slot.innerText = item.icon;
-                
-                // Обычный клик - экипировать
-                slot.onclick = () => { useItem(i); };
-                
-                // Долгое нажатие - Утилизация на пыль
-                let pressTimer;
-                slot.onmousedown = slot.ontouchstart = () => {
-                    pressTimer = setTimeout(() => {
-                        if (item.type !== 'potion') {
-                            inventory.splice(i, 1); player.dust += 4;
-                            audioPack.loot(); alert(`🔮 Разобрано на 4 ед. Магической пыли!`);
-                            openCampHub();
-                        }
-                    }, 700);
-                };
-                slot.onmouseup = slot.onmouseleave = slot.ontouchend = () => clearTimeout(pressTimer);
-
-                box.appendChild(slot);
-            });
-        }
-
-        function useItem(idx) {
-            let item = inventory[idx]; audioPack.click();
-            if (item.type === 'potion') { player.hp = player.maxHp = getDynamicMaxHp(); alert("🧪 Все ОЗ восполнены!"); inventory.splice(idx, 1); }
-            else { 
-                if (player[item.type]) inventory.push(player[item.type]); 
-                player[item.type] = item; inventory.splice(idx, 1); 
-                alert(`Надето: ${item.name} (+${item.stat})`); 
-            }
-            openCampHub();
-        }
-
-        function unequipItem(slot) { if (player[slot]) { inventory.push(player[slot]); player[slot] = null; openCampHub(); } }
-        function buyHealPotion() { if (player.gold >= 15) { player.gold -= 15; inventory.push({ type: 'potion', name: 'Зелье', icon: '🧪', rare:'common' }); openCampHub(); } else alert("Мало золота!"); }
-        
-        function craftFromDust() { 
-            if (player.dust >= 15) { 
-                player.dust -= 15; 
-                let r = { ...lootTable[Math.floor(Math.random() * lootTable.length)] }; 
-                inventory.push(r); alert(`🔨 Пыль материализовалась в: ${r.name} (${r.rare.toUpperCase()})`); 
-                openCampHub(); 
-            } else alert("Недостаточно пыли! Нужно 15 шт. (Зажимай вещи в инвентаре для разбора)"); 
-        }
-
-        function setupSkillButtons() {
-            let b1 = document.getElementById('btn-atk1'); let b2 = document.getElementById('btn-atk2');
-            let b3 = document.getElementById('btn-def'); let b4 = document.getElementById('btn-ult');
-            if (config.hero === 'алукард') {
-                b1.innerHTML = "[1] Рубка<br>+1⚡ [Вамп]"; b2.innerHTML = "[2] Магма-Взрыв<br>-1⚡ [Поджог]"; b3.innerHTML = "[3] Блок щитом<br>-1⚡"; b4.innerHTML = "[4] ВОЛНА БЕЗДНЫ<br>-3⚡ [Вамп]";
-            } else if (config.hero === 'мия') {
-                b1.innerHTML = "[1] Стрела<br>+1⚡ [Крит]"; b2.innerHTML = "[2] Ледяной Град<br>-1⚡ [Фриз]"; b3.innerHTML = "[3] Скрытие<br>-1⚡"; b4.innerHTML = "[4] СТРЕЛА РОКА<br>-3⚡";
-            } else if (config.hero === 'тигрил') {
-                b1.innerHTML = "[1] Удар Света<br>+1⚡"; b2.innerHTML = "[2] Грозовая кара<br>-1⚡ [Шок]"; b3.innerHTML = "[3] Бастион<br>-1⚡ [Усил]"; b4.innerHTML = "[4] ИМПЛОЗИЯ<br>-3⚡ [Стан]";
-            } else if (config.hero === 'госсен') {
-                b1.innerHTML = "[1] Веер Ножей<br>+2⚡"; b2.innerHTML = "[2] Теневое Пламя<br>-1⚡ [Поджог]"; b3.innerHTML = "[3] Шаг ветра<br>-1⚡"; b4.innerHTML = "[4] КАЗНЬ КЛИНКОВ<br>-3⚡";
-            }
-        }
-
-        function triggerBattle() {
-            combatActive = true; gameState.isGameOver = false; gameState.currentTurn = 'player';
-            let pool = zones[currentZone].monsterPool; currentCreep = { ...pool[Math.floor(Math.random() * pool.length)], maxHp: pool[0].hp, status: null };
-            player.status = null; player.mana = 3; player.shield = (config.hero === 'тигрил') ? 50 : 0;
-            
-            document.getElementById('bt-player-name').innerText = heroData[config.hero].name;
-            document.getElementById('bt-enemy-name').innerText = currentCreep.name;
-            document.getElementById('enemy-sprite').innerText = currentCreep.sprite;
-            document.getElementById('hero-sprite').innerText = heroData[config.hero].sprite;
-            
-            document.getElementById('log').innerHTML = "Эпическое столкновение! Ваш ход.";
-            setupSkillButtons(); updateBattleUI(); switchScreen('screen-battle');
-        }
-
-        function updateBattleUI() {
-            player.maxHp = getDynamicMaxHp();
-            document.getElementById('player-hp-text').innerText = `${player.hp}/${player.maxHp}`;
-            document.getElementById('player-hp-fill').style.width = `${(player.hp / player.maxHp)*100}%`;
-            document.getElementById('player-shield-fill').style.width = `${(player.shield / player.maxHp)*100}%`;
-            document.getElementById('player-mana-text').innerText = `⚡ ${player.mana}/${player.maxMana}`;
-            document.getElementById('enemy-hp-text').innerText = `${currentCreep.hp}/${currentCreep.maxHp}`;
-            document.getElementById('enemy-hp-fill').style.width = `${(currentCreep.hp / currentCreep.maxHp)*100}%`;
-            
-            document.getElementById('player-status-area').innerText = player.status ? `[${player.status.toUpperCase()}]` : '';
-            document.getElementById('enemy-status-area').innerText = currentCreep.status ? `[${currentCreep.status.toUpperCase()}]` : '';
-
-            let myTurn = (gameState.currentTurn === 'player' && !gameState.isGameOver);
-            document.getElementById('btn-atk1').disabled = !myTurn; 
-            document.getElementById('btn-atk2').disabled = !myTurn || player.mana < 1;
-            document.getElementById('btn-def').disabled = !myTurn || player.mana < 1; 
-            document.getElementById('btn-ult').disabled = !myTurn || player.mana < 3;
-        }
-
-        function addLog(t, c='#fff') { let l = document.getElementById('log'); l.innerHTML += `<br><span style="color:${c}">${t}</span>`; l.scrollTop = l.scrollHeight; }
-        function triggerDamageText(v, side) {
-            let d = document.createElement('div'); d.className = 'damage-pop'; d.innerText = v; d.style.left = side ? '75%' : '20%'; d.style.bottom = '40px';
-            if (v.includes('+') || v.includes('Блок')) d.style.color = '#55ff55'; if (v.includes('💥')) d.style.color = '#ffff55';
-            document.getElementById('battle-field').appendChild(d); setTimeout(() => d.remove(), 600);
-        }
-
-        // РЕАЛИЗАЦИЯ БОЕВОЙ СИСТЕМЫ И СТИХИЙНОГО СТАТУСА
-        function useCombatSkill(sk) {
-            if (gameState.isGameOver || gameState.currentTurn !== 'player') return;
-            
-            // Если игрок заморожен
-            if (player.status === 'ice') { player.status = null; addLog("🧊 Вы растопили лед и пропустили ход!", "#66b2ff"); gameState.currentTurn = 'enemy'; setTimeout(enemyTurn, 700); return; }
-
-            // Периодический урон от поджога игрока
-            if (player.status === 'fire') { player.hp = Math.max(1, player.hp - 8); triggerDamageText("-8🔥", false); addLog("🔥 Вы горите: -8 ОЗ", "#ff5555"); }
-
-            let spr = document.getElementById('hero-sprite'); let dmg = player.baseDmg + (player.weapon ? player.weapon.stat : 0);
-            spr.classList.add('strike-left'); setTimeout(() => spr.classList.remove('strike-left'), 250);
-
-            if (sk === 'atk1') {
-                let f = Math.floor(dmg*0.8) + Math.floor(Math.random()*4); let cr = false;
-                if (config.hero === 'мия' && Math.random() < 0.30) { f *= 2; cr = true; }
-                if (currentCreep.status === 'shock') { f = Math.floor(f*1.4); currentCreep.status = null; addLog("⚡ Разряд Шока сработал!", "#ffff55"); }
-                
-                currentCreep.hp = Math.max(0, currentCreep.hp - f);
-                player.mana = Math.min(player.maxMana, player.mana + (config.hero === 'госсен' ? 2 : 1)); audioPack.hit();
-                if (config.hero === 'алукард') { let v = Math.floor(f*0.25); player.hp = Math.min(player.maxHp, player.hp + v); triggerDamageText(`+${v}`, false); }
-                triggerDamageText(cr ? `💥${f}!` : `-${f}`, true); addLog(`Обычный удар: -${f} ОЗ`);
-            } 
-            else if (sk === 'atk2') {
-                player.mana -= 1; let f = Math.floor(dmg*1.2);
-                let elem = (config.hero === 'алукард' || config.hero === 'госсен') ? 'fire' : (config.hero === 'мия' ? 'ice' : 'shock');
-                currentCreep.status = elem; currentCreep.hp = Math.max(0, currentCreep.hp - f);
-                audioPack.hit(); triggerDamageText(`-${f}🌀`, true); addLog(`Стихийный навык наложил [${elem.toUpperCase()}]: -${f} ОЗ!`, '#ffaa00');
-            } 
-            else if (sk === 'def') {
-                player.mana -= 1; let multi = (config.hero === 'тигрил') ? 1.7 : 1.1;
-                let s = Math.floor((20 + (player.armor ? player.armor.stat : 0)) * multi); player.shield += s;
-                audioPack.block(); triggerDamageText(`+🛡️${s}`, false); addLog(`Активирован энерго-барьер: +${s}`, '#66b2ff');
-            } 
-            else if (sk === 'ult') {
-                player.mana -= 3; let f = Math.floor(dmg*2.6);
-                if (config.hero === 'госсен' && currentCreep.hp < (currentCreep.maxHp / 2)) f = Math.floor(f * 1.5);
-                currentCreep.hp = Math.max(0, currentCreep.hp - f); audioPack.hit();
-                if (config.hero === 'алукард') { let l = Math.floor(f*0.35); player.hp = Math.min(player.maxHp, player.hp + l); triggerDamageText(`+${l}`, false); }
-                document.getElementById('battle-field').classList.add('flash-red'); setTimeout(() => document.getElementById('battle-field').classList.remove('flash-red'), 200);
-                triggerDamageText(`💥💥${f}`, true); addLog(`🔮 УЛЬТИМЕЙТ КЛАССА сокрушил врага: нанес ${f}!`, '#ffff33');
-            }
-
-            updateBattleUI(); if (currentCreep.hp <= 0) { endBattle(true); return; }
-            gameState.currentTurn = 'enemy'; setTimeout(enemyTurn, 650);
-        }
-
-        // ИИ СТИХИЙНОГО ПРОТИВНИКА
-        function enemyTurn() {
-            if (gameState.isGameOver) return;
-            
-            // Если монстр заморожен
-            if (currentCreep.status === 'ice') { currentCreep.status = null; addLog(`🧊 ${currentCreep.name} заморожен и пропускает ход!`, "#55aaff"); gameState.currentTurn = 'player'; updateBattleUI(); return; }
-            
-            // Дорение монстра
-            if (currentCreep.status === 'fire') { currentCreep.hp = Math.max(0, currentCreep.hp - 12); triggerDamageText("-12🔥", true); addLog(`🔥 Горение подрывает монстра: -12 ОЗ`, "#ff3333"); if(currentCreep.hp<=0){endBattle(true);return;} }
-
-            let spr = document.getElementById('enemy-sprite'); spr.classList.add('strike-right'); setTimeout(() => spr.classList.remove('strike-right'), 250);
-            
-            let ed = Math.floor(Math.random()*(currentCreep.maxDmg - currentCreep.minDmg + 1)) + currentCreep.minDmg;
-            let r = Math.random();
-
-            if (r > 0.65) { // Наложение дебаффа на игрока в зависимости от элемента крипа
-                player.status = currentCreep.element;
-                addLog(`⚡ ${currentCreep.name} применил СТИХИЙНЫЙ ВСПЛЕСК [${currentCreep.element.toUpperCase()}]!`, '#ff3333');
-            }
-
-            if (player.shield > 0) { if (player.shield >= ed) { player.shield -= ed; ed = 0; } else { ed -= player.shield; player.shield = 0; } }
-            if (ed > 0) { player.hp = Math.max(0, player.hp - ed); triggerDamageText(`-${ed}`, false); audioPack.hit(); addLog(`Враг нанес урон: -${ed} ОЗ`, '#ff5555'); }
-            else { triggerDamageText("Блок", false); audioPack.block(); }
-
-            updateBattleUI(); 
-            if (player.hp <= 0) { endBattle(false); } else { gameState.currentTurn = 'player'; updateBattleUI(); }
-        }
-
-        function endBattle(win) {
-            gameState.isGameOver = true; combatActive = false;
-            if (win) {
-                audioPack.lvlUp(); player.gold += currentCreep.gold; player.exp += currentCreep.exp;
-                alert(`👑 Чистая победа! Получено: +${currentCreep.gold}💰 | +${currentCreep.exp} опыта`); 
-                megaMap[playerY][playerX] = 0; // Очищаем ячейку мега-карты
-                
-                if (player.exp >= player.nextExp) { 
-                    player.lvl++; player.exp -= player.nextExp; player.nextExp = Math.floor(player.nextExp * 1.5); 
-                    player.baseDmg += 6; player.hp = player.maxHp = getDynamicMaxHp(); alert("🌟 ВЫ СТАЛИ ЕЩЕ СИЛЬНЕЕ! УРОВЕНЬ ПОВЫШЕН!"); 
-                }
-                renderViewport(); switchScreen('screen-adventure');
-            } else { alert("💀 Мир пал перед мощью Бездны. Попробуйте сменить тактику или прокачать оружие."); switchScreen('screen-menu'); }
-        }
-        
-        updateSettingsUI();
+        UI.updateSettings();
     </script>
 </body>
 </html>
@@ -696,4 +570,4 @@ def home():
     return render_template_string(GAME_HTML)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
