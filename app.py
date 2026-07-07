@@ -8,7 +8,7 @@ GAME_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MLBB RPG: Одиссея Монии — v7.0</title>
+    <title>MLBB RPG: Эпоха Легенд — v8.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; }
@@ -25,8 +25,8 @@ GAME_HTML = """
         #game-container {
             width: 100%; max-width: 440px; height: 100%; max-height: 740px;
             display: flex; flex-direction: column; justify-content: space-between;
-            background: linear-gradient(135deg, #0f0f20 0%, #030307 100%);
-            border: 4px solid #555577; box-shadow: 0 0 35px rgba(0,0,0,0.9);
+            background: linear-gradient(135deg, #090914 0%, #020205 100%);
+            border: 4px solid #444466; box-shadow: 0 0 40px rgba(0,0,0,0.95);
             padding: 8px; position: relative; transition: all 0.3s ease;
         }
         #game-container.fullscreen { max-width: 100vw; max-height: 100vh; border: none; padding: 10px; }
@@ -36,7 +36,7 @@ GAME_HTML = """
         .col-left, .col-right { width: 100%; display: flex; flex-direction: column; justify-content: space-between; }
         
         @media (orientation: landscape) and (min-width: 550px) {
-            #game-container { max-width: 840px; max-height: 420px; flex-direction: row; padding: 10px; }
+            #game-container { max-width: 860px; max-height: 430px; flex-direction: row; padding: 10px; }
             .screen { flex-direction: row !important; width: 100%; gap: 12px; }
             .col-left { width: 49%; height: 100%; justify-content: space-between; }
             .col-right { width: 49%; height: 100%; justify-content: space-between; }
@@ -44,28 +44,28 @@ GAME_HTML = """
 
         h1 { font-size: 9px; color: #ffff55; text-shadow: 2px 2px #000; margin: 3px 0; text-transform: uppercase; letter-spacing: 1px; }
         .subtitle { font-size: 6px; color: #8a8ab0; margin-bottom: 4px; text-transform: uppercase; }
-        .panel { background-color: #0b0b14; border: 2px solid #3d3d5c; box-shadow: 3px 3px 0px #000; padding: 6px; margin-bottom: 4px; position: relative; }
+        .panel { background-color: #07070d; border: 2px solid #2d2d44; box-shadow: 3px 3px 0px #000; padding: 6px; margin-bottom: 4px; position: relative; }
         
         #map-grid {
             display: grid; grid-template-columns: repeat(9, 1fr); gap: 2px;
-            background: #05050a; padding: 4px; border: 3px solid #444466; margin: 2px auto;
-            width: 100%; max-width: 280px;
+            background: #030307; padding: 4px; border: 3px solid #333344; margin: 2px auto;
+            width: 100%; max-width: 270px;
         }
-        @media (orientation: landscape) { #map-grid { max-width: 230px; } }
+        @media (orientation: landscape) { #map-grid { max-width: 225px; } }
 
         .map-tile {
             aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-            font-size: 11px; background: #122212; border-radius: 2px; text-shadow: 1px 1px 0 #000;
+            font-size: 11px; background: #0f1a0f; border-radius: 2px; text-shadow: 1px 1px 0 #000;
         }
-        .tile-wall { background: #22222b; }
-        .tile-floor { background: #142414; }
-        .tile-mine { background: #261c17; }
-        .tile-waste { background: #332015; }
-        .tile-abyss { background: #2b0a0a; }
+        .tile-wall { background: #1c1c24; }
+        .tile-floor { background: #0f1c0f; }
+        .tile-mine { background: #221814; }
+        .tile-waste { background: #2b1b12; }
+        .tile-abyss { background: #240808; }
 
-        .dpad-container { display: grid; grid-template-columns: repeat(3, 1fr); width: 140px; margin: 4px auto; gap: 6px; }
-        .dpad-btn { font-family: 'Press Start 2P'; font-size: 15px; background: #252542; color: #fff; border: 2px outset #555588; padding: 12px 0; cursor: pointer; border-radius: 6px; }
-        .dpad-btn:active { border-style: inset; background: #15152b; color: #ffea00; }
+        .dpad-container { display: grid; grid-template-columns: repeat(3, 1fr); width: 145px; margin: 4px auto; gap: 6px; }
+        .dpad-btn { font-family: 'Press Start 2P'; font-size: 16px; background: #1f1f38; color: #fff; border: 2px outset #444477; padding: 12px 0; cursor: pointer; border-radius: 6px; }
+        .dpad-btn:active { border-style: inset; background: #111124; color: #ffea00; }
 
         .bar-container { width: 100%; height: 11px; background-color: #111; border: 2px solid #fff; margin-top: 2px; position: relative; }
         .hp-fill { height: 100%; background-color: #cc2222; width: 100%; transition: width 0.15s; }
@@ -73,18 +73,18 @@ GAME_HTML = """
         .shield-fill { height: 100%; background-color: #777788; width: 0%; transition: width 0.15s; }
         .exp-fill { height: 100%; background-color: #aa22cc; width: 0%; }
 
-        #log { height: 50px; overflow-y: auto; background: #010103; color: #4aff4a; padding: 4px; text-align: left; border: 2px solid #3d3d5c; font-size: 5.5px; line-height: 1.4; }
-        @media (orientation: landscape) { #log { height: 65px; } }
+        #log { height: 50px; overflow-y: auto; background: #010103; color: #4aff4a; padding: 4px; text-align: left; border: 2px solid #2d2d44; font-size: 5.5px; line-height: 1.4; }
+        @media (orientation: landscape) { #log { height: 75px; } }
         
-        .grid-2 { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
-        .menu-btn { font-family: 'Press Start 2P', cursive; background-color: #1f1f3a; color: #d4af37; border: 3px outset #444477; padding: 10px; width: 95%; margin: 4px auto; display: block; font-size: 8px; cursor: pointer; border-radius: 4px; }
+        .grid-3 { display: flex; gap: 4px; justify-content: space-between; }
+        .menu-btn { font-family: 'Press Start 2P', cursive; background-color: #18182e; color: #d4af37; border: 3px outset #3a3a66; padding: 10px; width: 95%; margin: 4px auto; display: block; font-size: 8px; cursor: pointer; border-radius: 4px; }
         
         .cards { display: flex; flex-wrap: wrap; gap: 4px; justify-content: space-between; }
-        .card-btn { font-family: 'Press Start 2P', cursive; background-color: #131324; color: #fff; border: 2px outset #3d3d5c; padding: 8px 1px; font-size: 6px; cursor: pointer; width: 49%; min-height: 40px; border-radius: 4px; line-height: 1.3; }
+        .card-btn { font-family: 'Press Start 2P', cursive; background-color: #0f0f1c; color: #fff; border: 2px outset #2d2d44; padding: 8px 1px; font-size: 6px; cursor: pointer; width: 49%; min-height: 40px; border-radius: 4px; line-height: 1.3; }
         .card-btn:disabled { opacity: 0.20; cursor: not-allowed; border-color: #222; }
         .attack { color: #ff6666; border-color: #aa4444; } .defend { color: #66b2ff; border-color: #4477aa; } .ultimate { color: #ffff55; border-color: #ffff55; font-weight: bold; }
 
-        .stage-container { position: relative; height: 80px; overflow: hidden; background: #020207; border: 2px solid #333; margin-top: 2px; }
+        .stage-container { position: relative; height: 80px; overflow: hidden; background: #010105; border: 2px solid #222; margin-top: 2px; }
         .sprite { font-size: 34px; position: absolute; bottom: 4px; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; }
         #hero-sprite { left: 15%; transform: scaleX(-1); }
         #enemy-sprite { right: 15%; }
@@ -96,16 +96,16 @@ GAME_HTML = """
         @keyframes floatEff { 0%, 100% { bottom: 4px; } 50% { bottom: 10px; } }
         @keyframes strikeL { 0% { left: 15%; } 50% { left: 45%; transform: scaleX(-1) scale(1.2); } 100% { left: 15%; } }
         @keyframes strikeR { 0% { right: 15%; } 50% { right: 45%; transform: scale(1.2); } 100% { right: 15%; } }
-        @keyframes flashR { 0%, 100% { background: #020207; } 50% { background: #400; } }
+        @keyframes flashR { 0%, 100% { background: #010105; } 50% { background: #400; } }
 
         .damage-pop { position: absolute; font-size: 9px; font-weight: bold; color: #ff3333; text-shadow: 1.5px 1.5px #000; animation: pUp 0.6s forwards ease-out; z-index: 10; }
         @keyframes pUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-25px) scale(1.2); } }
 
         .inv-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 4px 0; }
-        .inv-slot { background: #04040a; border: 2px solid #333; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; border-radius: 4px; }
-        .common { border-color: #888; } .epic { border-color: #22aaff; } .legend { border-color: #ffaa00; text-shadow: 0 0 4px #ffaa00; }
-        .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 6px; border-bottom: 1px solid #222; }
-        .btn-small { padding: 5px 8px; font-family: 'Press Start 2P'; font-size: 6px; background: #3d3d5c; color: #fff; border: 2px outset #555; cursor: pointer; border-radius: 3px; }
+        .inv-slot { background: #030307; border: 2px solid #222; height: 34px; display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer; border-radius: 4px; }
+        .common { border-color: #666; } .epic { border-color: #1f75fe; } .legend { border-color: #d4af37; text-shadow: 0 0 3px #d4af37; }
+        .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 6px; border-bottom: 1px solid #1a1a26; }
+        .btn-small { padding: 5px 8px; font-family: 'Press Start 2P'; font-size: 6px; background: #2d2d44; color: #fff; border: 2px outset #444; cursor: pointer; border-radius: 3px; }
     </style>
 </head>
 <body>
@@ -115,20 +115,20 @@ GAME_HTML = """
         <!-- ЭКРАН 1: ГЛАВНОЕ МЕНЮ -->
         <div id="screen-menu" class="screen active">
             <div class="col-left" style="justify-content: center;">
-                <h1 style="font-size: 11px; color: #ffff55; line-height: 1.4;">MLBB RPG:<br>ОДИССЕЯ МОНИИ</h1>
-                <p class="subtitle">Версия 7.0 (Эволюция Классов)</p>
+                <h1 style="font-size: 11px; color: #ffff55; line-height: 1.5;">MLBB RPG:<br>ЭПОХА ЛЕГЕНД</h1>
+                <p class="subtitle">Версия 8.0 (Глобальное Расширение)</p>
             </div>
             <div class="col-right" style="justify-content: center;">
-                <div style="font-size: 34px; margin: 15px 0; animation: floatEff 2s infinite ease-in-out;">🛡️🏹🗡️👹</div>
+                <div style="font-size: 34px; margin: 12px 0; animation: floatEff 2s infinite ease-in-out;">🛡️🔮👑👹</div>
                 <button class="menu-btn" onclick="startAdventure()">НАЧАТЬ ПУТЕШЕСТВИЕ</button>
-                <button class="menu-btn" onclick="switchScreen('screen-settings')">ВЫБОР ГЕРОЯ И НАСТРОЙКИ</button>
+                <button class="menu-btn" onclick="switchScreen('screen-settings')">ВЫБОР ЧЕМПИОНА И НАСТРОЙКИ</button>
             </div>
         </div>
 
         <!-- ЭКРАН 2: НАСТРОЙКИ И ПЕРСОНАЖИ -->
         <div id="screen-settings" class="screen">
             <div class="col-left">
-                <h1>ВЫБОР ЧЕМПИОНА</h1>
+                <h1>ВЫБОР ГЕРОЯ</h1>
                 <div class="panel" style="text-align: left; margin: 0;">
                     <div class="setting-row"><span>ГЕРОЙ:</span> <button id="cfg-hero" class="btn-small" style="color:#ffaa00; font-size:7px;" onclick="toggleSetting('hero')">АЛУКАРД</button></div>
                     <div class="setting-row"><span>ЭКРАН:</span> <button id="cfg-screen" class="btn-small" onclick="toggleSetting('screen')">ОКНО</button></div>
@@ -137,9 +137,7 @@ GAME_HTML = """
                 </div>
             </div>
             <div class="col-right">
-                <div class="panel" id="hero-desc-panel" style="font-size:5.5px; text-align:left; color:#aaa; line-height:1.4; margin-top: 5px; min-height: 110px;">
-                    <!-- Динамическое описание -->
-                </div>
+                <div class="panel" id="hero-desc-panel" style="font-size:5.5px; text-align:left; color:#aaa; line-height:1.4; margin-top: 5px; min-height: 110px;"></div>
                 <button class="menu-btn" onclick="switchScreen('screen-menu')">СОХРАНИТЬ И ВЕРНУТЬСЯ</button>
             </div>
         </div>
@@ -149,7 +147,7 @@ GAME_HTML = """
             <div class="col-left">
                 <div>
                     <h1 id="adv-location-title">ЛОКАЦИЯ 1</h1>
-                    <div style="display:flex; justify-content:space-between; font-size:6px; padding: 2px 3px; background: #000; border: 1px solid #222;">
+                    <div style="display:flex; justify-content:space-between; font-size:6px; padding: 2px 3px; background: #000; border: 1px solid #111;">
                         <span>❤️ ОЗ: <span id="adv-hp" style="color:#ff5555;">100/100</span></span>
                         <span>💰 ЗОЛОТО: <span id="adv-gold" style="color:#ffff55;">0</span></span>
                         <span>⭐ УР: <span id="adv-lvl">1</span></span>
@@ -159,8 +157,8 @@ GAME_HTML = """
             </div>
 
             <div class="col-right">
-                <div style="font-size:5px; color:#8a8ab0; margin: 2px 0;">
-                    Легенда: 👾-Крип | 🎁-Сундук | ⛲-Фонтан | 🎯-Портал
+                <div style="font-size:4.5px; color:#8a8ab0; margin: 1px 0; text-align:left; line-height:1.2;">
+                    Угрозы: 🕸️-Капкан (-15 ОЗ) | 🔥-Магма (-25 ОЗ)<br>Полезное: 👾-Крип | 🎁-Лут | ⛲-Хил | 🎯-Выход
                 </div>
                 <div>
                     <div class="dpad-container">
@@ -168,51 +166,52 @@ GAME_HTML = """
                         <button class="dpad-btn" onclick="movePlayer(0, -1)">▲</button>
                         <div></div>
                         <button class="dpad-btn" onclick="movePlayer(-1, 0)">◄</button>
-                        <button class="dpad-btn" style="background:#444466; font-size:11px; color:#ffff55;" onclick="openCampHub()">🎒</button>
+                        <button class="dpad-btn" style="background:#3a3a5c; font-size:11px; color:#ffff55;" onclick="openCampHub()">🎒</button>
                         <button class="dpad-btn" onclick="movePlayer(1, 0)">►</button>
                         <div></div>
                         <button class="dpad-btn" onclick="movePlayer(0, 1)">▼</button>
                         <div></div>
                     </div>
                 </div>
-                <button class="menu-btn" style="background:#222; margin-top:2px; padding:6px;" onclick="switchScreen('screen-menu')">ПОКИНУТЬ МИР</button>
+                <button class="menu-btn" style="background:#1a1a1a; margin-top:2px; padding:6px;" onclick="switchScreen('screen-menu')">В ГЛАВНОЕ МЕНЮ</button>
             </div>
         </div>
 
         <!-- ЭКРАН 4: ЛАГЕРЬ -->
         <div id="screen-camp" class="screen">
             <div class="col-left">
-                <h1 style="color:#55ff55;">СНАРЯЖЕНИЕ И ЛАГЕРЬ</h1>
+                <h1 style="color:#55ff55;">СНАРЯЖЕНИЕ И КУЗНИЦА</h1>
                 <div class="panel" style="text-align: left; font-size: 6px; line-height: 1.4; margin: 0;">
-                    <div>КЛАСС: <span id="camp-hero" style="color:#6da5ff;">АЛУКАРД</span> (<span id="camp-lvl">1</span> Ур.)</div>
-                    <div>УРОН: <span id="camp-dmg" style="color:#ff5555;">16</span> | ЗОЛОТО: <span id="camp-gold" style="color:#ffff55;">0</span></div>
+                    <div>ГЕРОЙ: <span id="camp-hero" style="color:#6da5ff;">АЛУКАРД</span> (<span id="camp-lvl">1</span> Ур.)</div>
+                    <div>АТАКА: <span id="camp-dmg" style="color:#ff5555;">16</span> | ЗОЛОТО: <span id="camp-gold" style="color:#ffff55;">0</span></div>
                     <div class="bar-container" style="height:6px; margin-top:4px;"><div id="camp-exp-fill" class="exp-fill"></div></div>
                 </div>
-                <div class="panel" style="margin-top: 4px;">
-                    <div style="display:flex; justify-content: space-between;">
-                        <div class="inv-slot" id="slot-weapon" style="width:48%; font-size:7px;" onclick="unequipItem('weapon')">⚔️ Оружие</div>
-                        <div class="inv-slot" id="slot-armor" style="width:48%; font-size:7px;" onclick="unequipItem('armor')">🛡️ Доспех</div>
+                <div class="panel" style="margin-top: 4px; padding: 4px;">
+                    <div style="display:flex; justify-content: space-between; gap:2px;">
+                        <div class="inv-slot" id="slot-weapon" style="width:32%; font-size:6px; text-align:center;" onclick="unequipItem('weapon')">⚔️ Оружие</div>
+                        <div class="inv-slot" id="slot-armor" style="width:32%; font-size:6px; text-align:center;" onclick="unequipItem('armor')">🛡️ Доспех</div>
+                        <div class="inv-slot" id="slot-artifact" style="width:32%; font-size:6px; text-align:center;" onclick="unequipItem('artifact')">🔮 Реликт</div>
                     </div>
                 </div>
             </div>
 
             <div class="col-right">
                 <div class="panel" style="margin: 0;">
-                    <div style="font-size: 5px; text-align: left; margin-bottom: 2px; color:#aaa;">РЮКЗАК:</div>
+                    <div style="font-size: 5px; text-align: left; margin-bottom: 2px; color:#aaa;">ИНВЕНТАРЬ (НАЖМИ ДЛЯ СЛОТА):</div>
                     <div class="inv-grid" id="inventory-container"></div>
                 </div>
                 <div class="grid-2" style="margin-top:4px;">
-                    <button class="card-btn attack" style="min-height:30px;" onclick="craftItem()">🔨 КУЗНИЦА (30💰)</button>
+                    <button class="card-btn attack" style="min-height:30px;" onclick="craftItem()">🔨 КУЗНИЦА (35💰)</button>
                     <button class="card-btn defend" style="min-height:30px;" onclick="buyHealPotion()">🧪 ЗЕЛЬЕ (15💰)</button>
                 </div>
-                <button class="menu-btn" style="background:#333; padding:6px; margin-top:4px;" onclick="switchScreen('screen-adventure')">НАЗАД К КАРТЕ</button>
+                <button class="menu-btn" style="background:#222; padding:6px; margin-top:4px;" onclick="switchScreen('screen-adventure')">НАЗАД К КАРТЕ</button>
             </div>
         </div>
 
         <!-- ЭКРАН 5: БОЕВАЯ СИСТЕМА -->
         <div id="screen-battle" class="screen">
             <div class="col-left">
-                <h1 style="color:#ff4444; font-size:8px;">БИТВА С КРИПОМ!</h1>
+                <h1 style="color:#ff4444; font-size:8px;">ПОДЗЕМЕЛЬЕ БИТВЫ</h1>
                 <div class="panel" id="battle-field" style="margin: 0; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;">
                     <div style="display:flex; justify-content:space-between; font-size:6px; font-weight:bold;">
                         <span id="bt-player-name" style="color:#6da5ff;">ГЕРОЙ</span>
@@ -223,14 +222,14 @@ GAME_HTML = """
                         <div id="enemy-sprite" class="sprite float-anim">👾</div>
                     </div>
                     <div>
-                        <div style="font-size:5px; margin-bottom:1px; text-align:left;">ОЗ ВРАГА: <span id="enemy-hp-text">50/50</span></div>
+                        <div style="font-size:5px; margin-bottom:1px; text-align:left;">ОЗ ПРОТИВНИКА: <span id="enemy-hp-text">50/50</span></div>
                         <div class="bar-container" style="height:7px;"><div id="enemy-hp-fill" class="hp-fill"></div></div>
                     </div>
                 </div>
             </div>
 
             <div class="col-right">
-                <div class="panel" style="padding:2px; margin-bottom:4px;"><div id="log">Приготовьтесь...</div></div>
+                <div class="panel" style="padding:2px; margin-bottom:4px;"><div id="log">Приготовиться к бою...</div></div>
 
                 <div class="panel" id="player-panel" style="margin: 0; padding: 4px;">
                     <div style="display:flex; justify-content:space-between; font-size:6px; font-weight:bold; margin-bottom:2px;">
@@ -256,14 +255,14 @@ GAME_HTML = """
     <script>
         const heroList = ['алукард', 'мия', 'тигрил', 'госсен'];
         const heroData = {
-            'алукард': { name: "АЛУКАРД", maxHp: 120, dmg: 16, sprite: "⚔️", desc: "* АЛУКАРД: Боец. Вампиризм (Восстанавливает здоровье при базовой атаке и Ультимейте)." },
-            'мия': { name: "МИЯ", maxHp: 95, dmg: 21, sprite: "🏹", desc: "* МИЯ: Стрелок. Критический урон (Шанс 25% нанести двойной урон базовой атакой)." },
-            'тигрил': { name: "ТИГРИЛ", maxHp: 160, dmg: 13, sprite: "🛡️", desc: "* ТИГРИЛ: Танк. Крепость (Начинает бой с 30 единицами брони, а навык щита усилен на +50%)." },
-            'госсен': { name: "ГОССЕН", maxHp: 100, dmg: 20, sprite: "🗡️", desc: "* ГОССЕН: Убийца. Комбо (Базовая атака дает +2 энергии. Ультимейт наносит +40% урона, если у врага <50% ОЗ)." }
+            'алукард': { name: "АЛУКАРД", maxHp: 125, dmg: 17, sprite: "⚔️", desc: "* АЛУКАРД: Боец. Вампиризм (Восстановление здоровья при атаках и Ультимейте)." },
+            'мия': { name: "МИЯ", maxHp: 100, dmg: 22, sprite: "🏹", desc: "* МИЯ: Стрелок. Криты (Шанс 25% нанести x2 урон обычной атакой)." },
+            'тигрил': { name: "ТИГРИЛ", maxHp: 170, dmg: 14, sprite: "🛡️", desc: "* ТИГРИЛ: Танк. Бастион (Начинает бой со щитом в 40 ед. Эффективность блока +50%)." },
+            'госсен': { name: "ГОССЕН", maxHp: 105, dmg: 21, sprite: "🗡️", desc: "* ОЛЬТЕРНАТИВА: Убийца. Скорость (Атака дает +2 энергии. Ульт сильнее на 40% при ОЗ врага < 50%)." }
         };
 
         let config = { sound: true, music: true, hero: 'алукард', fullscreen: false };
-        let player = { lvl: 1, exp: 0, nextExp: 80, gold: 40, baseDmg: 16, hp: 100, maxHp: 100, mana: 3, maxMana: 4, shield: 0, weapon: null, armor: null };
+        let player = { lvl: 1, exp: 0, nextExp: 80, gold: 50, baseDmg: 17, hp: 125, maxHp: 125, mana: 3, maxMana: 4, shield: 0, weapon: null, armor: null, artifact: null };
         let inventory = [{ type: 'potion', name: 'Зелье ОЗ', icon: '🧪' }];
         let currentZone = 0; let playerX = 1; let playerY = 1;
         let combatActive = false; let currentCreep = null;
@@ -272,53 +271,25 @@ GAME_HTML = """
         const lootTable = [
             { type: 'weapon', name: 'Меч Легиона', icon: '🗡️', stat: 8, rare: 'common' },
             { type: 'weapon', name: 'Копьё Дракона', icon: '🔱', stat: 18, rare: 'epic' },
-            { type: 'weapon', name: 'Клинок Отчаяния', icon: '⚔️', stat: 38, rare: 'legend' },
+            { type: 'weapon', name: 'Клинок Отчаяния', icon: '⚔️', stat: 40, rare: 'legend' },
             { type: 'armor', name: 'Латный доспех', icon: '👕', stat: 6, rare: 'common' },
             { type: 'armor', name: 'Кираса Монии', icon: '🛡️', stat: 16, rare: 'epic' },
-            { type: 'armor', name: 'Щит Спасителя', icon: '💎', stat: 35, rare: 'legend' }
+            { type: 'armor', name: 'Щит Спасителя', icon: '💎', stat: 36, rare: 'legend' },
+            { type: 'artifact', name: 'Амулет Жизни', icon: '📿', stat: 25, rare: 'common' }, // для артефактов stat идет в максХП
+            { type: 'artifact', name: 'Сфера Бездны', icon: '🔮', stat: 50, rare: 'epic' },
+            { type: 'artifact', name: 'Сердце Оракула', icon: '👑', stat: 100, rare: 'legend' }
         ];
 
+        // 8 УНИКАЛЬНЫХ ИГРОВЫХ ЗОН (МАСШТАБ 10Х)
         const zones = [
-            {
-                title: "🌲 Сады Империи Мония", tileClass: "tile-floor", wallClass: "tile-wall", wallIcon: "🌲",
-                map: [
-                    [1,1,1,1,1,1,1,1,1], [1,0,0,4,1,0,0,2,1], [1,0,1,0,1,0,1,0,1], [1,2,1,0,5,0,1,0,1],
-                    [1,0,1,1,1,0,1,2,1], [1,0,0,2,1,0,1,0,1], [1,1,0,0,1,0,4,0,1], [1,2,0,4,0,0,1,3,1], [1,1,1,1,1,1,1,1,1]
-                ],
-                creeps: [{ name: "Слайм Бездны", hp: 45, maxHp: 45, sprite: "🟢", minDmg: 4, maxDmg: 8, exp: 40, gold: 15 }]
-            },
-            {
-                title: "🍁 Шепчущий Древний Лес", tileClass: "tile-floor", wallClass: "tile-wall", wallIcon: "🌿",
-                map: [
-                    [1,1,1,1,1,1,1,1,1], [1,0,2,0,4,0,1,2,1], [1,1,1,1,0,1,1,0,1], [1,0,5,2,0,0,1,0,1],
-                    [1,0,1,1,1,1,1,4,1], [1,2,1,0,0,5,0,0,1], [1,0,1,0,1,1,1,2,1], [1,4,0,0,2,0,1,3,1], [1,1,1,1,1,1,1,1,1]
-                ],
-                creeps: [{ name: "Лесной Волк", hp: 75, maxHp: 75, sprite: "🐺", minDmg: 9, maxDmg: 15, exp: 65, gold: 30 }]
-            },
-            {
-                title: "⛰️ Заброшенные Шахты Эрдитии", tileClass: "tile-mine", wallClass: "tile-wall", wallIcon: "🧱",
-                map: [
-                    [1,1,1,1,1,1,1,1,1], [1,0,4,0,1,0,5,2,1], [1,0,1,0,0,0,1,0,1], [1,2,1,1,1,1,1,4,1],
-                    [1,0,0,2,1,0,0,0,1], [1,1,1,0,1,0,1,1,1], [1,2,5,0,1,2,1,2,1], [1,4,1,0,4,0,0,3,1], [1,1,1,1,1,1,1,1,1]
-                ],
-                creeps: [{ name: "Каменный Голем", hp: 130, maxHp: 130, sprite: "🗿", minDmg: 14, maxDmg: 24, exp: 120, gold: 45 }]
-            },
-            {
-                title: "🏜️ Пустоши Заката", tileClass: "tile-waste", wallClass: "tile-wall", wallIcon: "⛰️",
-                map: [
-                    [1,1,1,1,1,1,1,1,1], [1,0,2,1,0,2,1,4,1], [1,5,0,1,0,0,1,0,1], [1,1,0,4,5,0,0,2,1],
-                    [1,2,0,1,1,1,1,0,1], [1,0,1,1,0,4,1,0,1], [1,4,2,1,2,0,0,2,1], [1,1,0,0,0,1,1,3,1], [1,1,1,1,1,1,1,1,1]
-                ],
-                creeps: [{ name: "Орк-Налетчик", hp: 180, maxHp: 180, sprite: "👹", minDmg: 20, maxDmg: 32, exp: 190, gold: 65 }]
-            },
-            {
-                title: "🌋 Цитадель Бездны", tileClass: "tile-abyss", wallClass: "tile-wall", wallIcon: "🔥",
-                map: [
-                    [1,1,1,1,1,1,1,1,1], [1,4,0,0,1,0,0,2,1], [1,0,1,0,1,0,1,0,1], [1,2,1,0,5,0,1,4,1],
-                    [1,0,1,1,1,1,1,2,1], [1,0,4,2,1,0,5,0,1], [1,1,1,0,1,0,1,1,1], [1,2,0,0,4,2,1,3,1], [1,1,1,1,1,1,1,1,1]
-                ],
-                creeps: [{ name: "ТАМУЗ (ЛОРД ПЕКЛА)", hp: 480, maxHp: 480, sprite: "🔥", minDmg: 35, maxDmg: 55, exp: 999, gold: 500, isBoss: true }]
-            }
+            { title: "Сады Империи Мония", tileClass: "tile-floor", wallClass: "tile-wall", wallIcon: "🌲", map: [[1,1,1,1,1,1,1,1,1],[1,0,0,6,1,0,0,2,1],[1,0,1,0,1,0,1,0,1],[1,2,1,0,5,0,1,0,1],[1,0,1,1,1,0,1,2,1],[1,0,0,2,1,0,1,0,1],[1,1,0,0,1,0,6,0,1],[1,2,0,4,0,0,1,3,1],[1,1,1,1,1,1,1,1,1]], creeps: [{ name: "Малый Слайм", hp: 45, maxHp: 45, sprite: "🟢", minDmg: 4, maxDmg: 8, exp: 40, gold: 15, ai: 'normal' }] },
+            { title: "Шепчущий Древний Лес", tileClass: "tile-floor", wallClass: "tile-wall", wallIcon: "🌿", map: [[1,1,1,1,1,1,1,1,1],[1,0,2,0,4,0,1,6,1],[1,1,1,1,0,1,1,0,1],[1,0,5,2,0,0,1,0,1],[1,0,1,1,1,1,1,6,1],[1,2,1,0,0,5,0,0,1],[1,0,1,0,1,1,1,2,1],[1,6,0,0,2,0,1,3,1],[1,1,1,1,1,1,1,1,1]], creeps: [{ name: "Лесной Волк", hp: 75, maxHp: 75, sprite: "🐺", minDmg: 9, maxDmg: 15, exp: 65, gold: 30, ai: 'healer' }] },
+            { title: "Заброшенные Шахты Эрдитии", tileClass: "tile-mine", wallClass: "tile-wall", wallIcon: "🧱", map: [[1,1,1,1,1,1,1,1,1],[1,0,4,0,1,0,5,2,1],[1,0,1,0,6,0,1,0,1],[1,2,1,1,1,1,1,7,1],[1,0,0,2,1,0,0,0,1],[1,1,1,0,1,0,1,1,1],[1,2,5,0,1,2,1,6,1],[1,6,1,0,4,0,0,3,1],[1,1,1,1,1,1,1,1,1]], creeps: [{ name: "Каменный Голем", hp: 130, maxHp: 130, sprite: "🗿", minDmg: 14, maxDmg: 24, exp: 120, gold: 45, ai: 'defender' }] },
+            { title: "Пустоши Заката", tileClass: "tile-waste", wallClass: "tile-wall", wallIcon: "⛰️", map: [[1,1,1,1,1,1,1,1,1],[1,0,2,1,0,2,1,4,1],[1,5,0,1,7,0,1,0,1],[1,1,0,6,5,0,0,2,1],[1,2,0,1,1,1,1,0,1],[1,0,1,1,0,4,1,0,1],[1,4,2,1,2,0,7,2,1],[1,1,0,0,0,1,1,3,1],[1,1,1,1,1,1,1,1,1]], creeps: [{ name: "Орк-Шаман", hp: 175, maxHp: 175, sprite: "👹", minDmg: 20, maxDmg: 30, exp: 190, gold: 60, ai: 'healer' }] },
+            { title: "Некрополь Королей", tileClass: "tile-mine", wallClass: "tile-wall", wallIcon: "💀", map: [[1,1,1,1,1,1,1,1,1],[1,0,6,0,1,2,0,4,1],[1,2,1,0,1,0,1,0,1],[1,0,1,5,7,0,1,2,1],[1,0,1,1,1,1,1,0,1],[1,0,7,2,1,0,5,0,1],[1,1,1,0,1,0,1,1,1],[1,4,0,0,6,2,1,3,1],[1,1,1,1,1,1,1,1,1]], creeps: [{ name: "Скелет-Воин", hp: 220, maxHp: 220, sprite: "💀", minDmg: 25, maxDmg: 38, exp: 260, gold: 80, ai: 'furious' }] },
+            { title: "Ледяные Пики Ностальгии", tileClass: "tile-floor", wallClass: "tile-wall", wallIcon: "❄️", map: [[1,1,1,1,1,1,1,1,1],[1,4,0,7,1,0,0,2,1],[1,0,1,0,1,6,1,0,1],[1,2,1,0,5,0,1,4,1],[1,0,1,1,1,1,1,2,1],[1,6,4,2,1,0,5,0,1],[1,1,1,0,1,7,1,1,1],[1,2,0,0,4,2,1,3,1],[1,1,1,1,1,1,1,1,1]], creeps: [{ name: "Ледяной Клык", hp: 280, maxHp: 280, sprite: "🐅", minDmg: 30, maxDmg: 45, exp: 350, gold: 100, ai: 'defender' }] },
+            { title: "Логово Драконов Земли", tileClass: "tile-waste", wallClass: "tile-wall", wallIcon: "🐉", map: [[1,1,1,1,1,1,1,1,1],[1,0,2,0,1,6,0,4,1],[1,7,1,0,1,0,1,0,1],[1,2,1,5,7,0,1,2,1],[1,0,1,1,1,1,1,0,1],[1,0,6,2,1,5,5,0,1],[1,1,1,0,1,0,1,1,1],[1,4,0,7,4,2,1,3,1],[1,1,1,1,1,1,1,1,1]], creeps: [{ name: "Драконид", hp: 350, maxHp: 350, sprite: "🦎", minDmg: 35, maxDmg: 55, exp: 500, gold: 130, ai: 'furious' }] },
+            { title: "🌋 Сердце Пекла Бездны", tileClass: "tile-abyss", wallClass: "tile-wall", wallIcon: "🔥", map: [[1,1,1,1,1,1,1,1,1],[1,4,7,7,1,7,7,2,1],[1,7,1,0,1,0,1,7,1],[1,2,1,0,5,0,1,4,1],[1,7,1,1,1,1,1,2,1],[1,0,4,2,1,0,5,7,1],[1,1,1,7,1,7,1,1,1],[1,2,7,0,4,2,7,3,1],[1,1,1,1,1,1,1,1,1]], creeps: [{ name: "ТАМУЗ (ЛОРД ПЕКЛА)", hp: 666, maxHp: 666, sprite: "🔥", minDmg: 45, maxDmg: 65, exp: 9999, gold: 888, isBoss: true, ai: 'boss' }] }
         ];
 
         let audioCtx = null; let musicTimer = null; let musicTicks = 0;
@@ -350,6 +321,7 @@ GAME_HTML = """
             heal: () => { makeTone(300, 'sine', 0.1, 0.02); setTimeout(() => makeTone(600, 'sine', 0.15, 0.02), 60); },
             hit: () => { makeTone(200, 'sawtooth', 0.08, 0.02); },
             block: () => makeTone(350, 'sine', 0.1, 0.03),
+            trap: () => { makeTone(180, 'sawtooth', 0.2, 0.04); },
             lvlUp: () => { [440, 554, 659].forEach((f, i) => setTimeout(() => makeTone(f, 'sine', 0.15, 0.02), i*70)); }
         };
 
@@ -363,7 +335,7 @@ GAME_HTML = """
         function updateSettingsUI() {
             let h = heroData[config.hero];
             document.getElementById('cfg-hero').innerText = h.name;
-            document.getElementById('hero-desc-panel').innerHTML = `${h.desc}<br><br><span style='color:#ff5555'>Базовое ОЗ: ${h.maxHp}</span><br><span style='color:#ffaa00'>Базовый Урон: ${h.dmg}</span>`;
+            document.getElementById('hero-desc-panel').innerHTML = `${h.desc}<br><br><span style='color:#ff5555'>Стартовое ОЗ: ${h.maxHp}</span><br><span style='color:#ffaa00'>Стартовая Атака: ${h.dmg}</span>`;
         }
 
         function toggleSetting(key) {
@@ -380,21 +352,28 @@ GAME_HTML = """
             }
         }
 
+        function getDynamicMaxHp() {
+            let base = heroData[config.hero].maxHp + (player.lvl - 1) * 14;
+            if (player.artifact) base += player.artifact.stat;
+            return base;
+        }
+
         function startAdventure() {
             let data = heroData[config.hero];
-            player.maxHp = data.maxHp; player.baseDmg = data.dmg;
-            player.gold = 40; player.lvl = 1; player.exp = 0; player.hp = player.maxHp; player.weapon = null; player.armor = null;
+            player.lvl = 1; player.exp = 0; player.nextExp = 80; player.gold = 50;
+            player.baseDmg = data.dmg; player.weapon = null; player.armor = null; player.artifact = null;
+            player.maxHp = getDynamicMaxHp(); player.hp = player.maxHp;
             inventory = [{ type: 'potion', name: 'Зелье ОЗ', icon: '🧪' }]; loadZone(0);
         }
 
         function loadZone(idx) {
-            currentZone = idx; if (currentZone >= zones.length) { alert("🏆 ПОБЕДА! Мония полностью спасена!"); switchScreen('screen-menu'); return; }
+            currentZone = idx; if (currentZone >= zones.length) { alert("🏆 НЕВЕРОЯТНО! Вы прошли все 8 зон и спасли Монию!"); switchScreen('screen-menu'); return; }
             playerX = 1; playerY = 1; renderMap(); switchScreen('screen-adventure');
         }
 
         function renderMap() {
-            let z = zones[currentZone];
-            document.getElementById('adv-location-title').innerText = `${currentZone+1}/5: ${z.title}`;
+            let z = zones[currentZone]; player.maxHp = getDynamicMaxHp();
+            document.getElementById('adv-location-title').innerText = `${currentZone+1}/8: ${z.title}`;
             document.getElementById('adv-hp').innerText = `${player.hp}/${player.maxHp}`;
             document.getElementById('adv-gold').innerText = player.gold; document.getElementById('adv-lvl').innerText = player.lvl;
             
@@ -406,6 +385,7 @@ GAME_HTML = """
                     if (code === 1) { cell.className = "map-tile " + z.wallClass; cell.innerText = z.wallIcon; }
                     else if (code === 2) cell.innerText = "👾"; else if (code === 3) cell.innerText = "🎯";
                     else if (code === 4) cell.innerText = "🎁"; else if (code === 5) cell.innerText = "⛲";
+                    else if (code === 6) cell.innerText = "🕸️"; else if (code === 7) cell.innerText = "🔥";
                     if (x === playerX && y === playerY) cell.innerText = heroData[config.hero].sprite;
                     grid.appendChild(cell);
                 }
@@ -419,9 +399,11 @@ GAME_HTML = """
                 playerX = tx; playerY = ty; audioPack.step();
                 let trg = z.map[playerY][playerX];
                 if (trg === 2) { triggerBattle(); return; }
-                if (trg === 3) { alert("✨ Телепортация вглубь Монии..."); loadZone(currentZone + 1); return; }
-                if (trg === 4) { let g = Math.floor(Math.random()*15)+15; player.gold += g; audioPack.loot(); alert(`🎁 Золото: +${g}💰`); z.map[playerY][playerX] = 0; }
-                if (trg === 5) { player.hp = player.maxHp; audioPack.heal(); alert("⛲ Светлый Фонтан полностью исцелил раны!"); z.map[playerY][playerX] = 0; }
+                if (trg === 3) { alert("✨ Переход в следующую опасную главу..."); loadZone(currentZone + 1); return; }
+                if (trg === 4) { let g = Math.floor(Math.random()*20)+15; player.gold += g; audioPack.loot(); alert(`🎁 Найдено золото: +${g}💰`); z.map[playerY][playerX] = 0; }
+                if (trg === 5) { player.hp = player.maxHp = getDynamicMaxHp(); audioPack.heal(); alert(" Fountain полностью залечил ваши раны!"); z.map[playerY][playerX] = 0; }
+                if (trg === 6) { player.hp = Math.max(1, player.hp - 15); audioPack.trap(); alert("🕸️ Хруст! Капкан нанес вам -15 ОЗ!"); }
+                if (trg === 7) { player.hp = Math.max(1, player.hp - 25); audioPack.trap(); alert("🔥 Ожог! Магма нанесла вам -25 ОЗ!"); }
                 renderMap();
             }
         }
@@ -433,12 +415,15 @@ GAME_HTML = """
         });
 
         function openCampHub() {
-            switchScreen('screen-camp'); document.getElementById('camp-hero').innerText = config.hero.toUpperCase();
+            switchScreen('screen-camp'); player.maxHp = getDynamicMaxHp();
+            document.getElementById('camp-hero').innerText = config.hero.toUpperCase();
             document.getElementById('camp-lvl').innerText = player.lvl; document.getElementById('camp-gold').innerText = player.gold;
             document.getElementById('camp-exp-fill').style.width = `${(player.exp / player.nextExp)*100}%`;
             let wStat = player.weapon ? player.weapon.stat : 0; document.getElementById('camp-dmg').innerText = player.baseDmg + wStat;
-            document.getElementById('slot-weapon').innerText = player.weapon ? `${player.weapon.icon} +${player.weapon.stat}` : '⚔️ Руки';
-            document.getElementById('slot-armor').innerText = player.armor ? `${player.armor.icon} +${player.armor.stat}` : '🛡️ Одежда';
+            document.getElementById('slot-weapon').innerText = player.weapon ? `${player.weapon.icon} +${player.weapon.stat}` : '⚔️ Оружие';
+            document.getElementById('slot-armor').innerText = player.armor ? `${player.armor.icon} +${player.armor.stat}` : '🛡️ Доспех';
+            document.getElementById('slot-artifact').innerText = player.artifact ? `${player.artifact.icon} +${player.artifact.stat} ОЗ` : '🔮 Реликт';
+            
             let box = document.getElementById('inventory-container'); box.innerHTML = "";
             inventory.forEach((item, i) => {
                 let slot = document.createElement('div'); slot.className = `inv-slot ${item.rare || 'common'}`;
@@ -448,25 +433,37 @@ GAME_HTML = """
 
         function useItem(idx) {
             let item = inventory[idx]; audioPack.click();
-            if (item.type === 'potion') { player.hp = player.maxHp; alert("🧪 ХП восстановлено!"); inventory.splice(idx, 1); }
-            else { if (player[item.type]) inventory.push(player[item.type]); player[item.type] = item; inventory.splice(idx, 1); alert(`Экипировано: ${item.name}`); }
+            if (item.type === 'potion') { player.hp = player.maxHp = getDynamicMaxHp(); alert("🧪 Все ОЗ восстановлены!"); inventory.splice(idx, 1); }
+            else { 
+                if (player[item.type]) inventory.push(player[item.type]); 
+                player[item.type] = item; inventory.splice(idx, 1); 
+                alert(`Надето: ${item.name}`); 
+            }
             openCampHub();
         }
         function unequipItem(slot) { if (player[slot]) { inventory.push(player[slot]); player[slot] = null; openCampHub(); } }
-        function buyHealPotion() { if (player.gold >= 15) { player.gold -= 15; inventory.push({ type: 'potion', name: 'Зелье', icon: '🧪' }); openCampHub(); } else alert("Недостаточно золота!"); }
-        function craftItem() { if (player.gold >= 30) { player.gold -= 30; let r = { ...lootTable[Math.floor(Math.random() * lootTable.length)] }; inventory.push(r); alert(`🔨 Выковано: ${r.name}`); openCampHub(); } else alert("Нужно 30💰"); }
+        function buyHealPotion() { if (player.gold >= 15) { player.gold -= 15; inventory.push({ type: 'potion', name: 'Зелье', icon: '🧪' }); openCampHub(); } else alert("Мало монет!"); }
+        
+        function craftItem() { 
+            if (player.gold >= 35) { 
+                player.gold -= 35; 
+                let r = { ...lootTable[Math.floor(Math.random() * lootTable.length)] }; 
+                inventory.push(r); alert(`🔨 Выковано: ${r.name} (${r.rare.toUpperCase()})`); 
+                openCampHub(); 
+            } else alert("Нужно 35💰"); 
+        }
 
         function setupSkillButtons() {
             let b1 = document.getElementById('btn-atk1'); let b2 = document.getElementById('btn-atk2');
             let b3 = document.getElementById('btn-def'); let b4 = document.getElementById('btn-ult');
             if (config.hero === 'алукард') {
-                b1.innerHTML = "⚔️ Рубка<br>(+1⚡ Вамп)"; b2.innerHTML = "💥 Прыжок<br>(-1⚡)"; b3.innerHTML = "🛡️ Контрудар<br>(-1⚡)"; b4.innerHTML = "🔮 Расщепл.<br>(-3⚡ Вамп)";
+                b1.innerHTML = "⚔️ Рубка<br>(+1⚡ Вамп)"; b2.innerHTML = "💥 Прыжок<br>(-1⚡)"; b3.innerHTML = "🛡️ Отражение<br>(-1⚡)"; b4.innerHTML = "🔮 Расщепл.<br>(-3⚡ Вамп)";
             } else if (config.hero === 'мия') {
-                b1.innerHTML = "🏹 Выстрел<br>(+1⚡ Крит)"; b2.innerHTML = "💥 Обстрел<br>(-1⚡)"; b3.innerHTML = "💨 Шаг ветра<br>(-1⚡)"; b4.innerHTML = "🔮 Натиск<br>(-3⚡)";
+                b1.innerHTML = "🏹 Стрела<br>(+1⚡ Крит)"; b2.innerHTML = "💥 Обстрел<br>(-1⚡)"; b3.innerHTML = "💨 Скрытие<br>(-1⚡)"; b4.innerHTML = "🔮 Натиск<br>(-3⚡)";
             } else if (config.hero === 'тигрил') {
-                b1.innerHTML = "🔨 Молот<br>(+1⚡)"; b2.innerHTML = "💥 Авангард<br>(-1⚡)"; b3.innerHTML = "🛡️ Стена<br>(-1⚡ Усил)"; b4.innerHTML = "🔮 Имплозия<br>(-3⚡)";
+                b1.innerHTML = "🔨 Молот<br>(+1⚡)"; b2.innerHTML = "💥 Натиск<br>(-1⚡)"; b3.innerHTML = "🛡️ Стена щитов<br>(-1⚡ Усил)"; b4.innerHTML = "🔮 Имплозия<br>(-3⚡ Контроль)";
             } else if (config.hero === 'госсен') {
-                b1.innerHTML = "🗡️ Кинжал<br>(+2⚡ Быстро)"; b2.innerHTML = "💥 Бросок<br>(-1⚡)"; b3.innerHTML = "🌀 Смещение<br>(-1⚡)"; b4.innerHTML = "🔮 Казнь<br>(-3⚡ Урон+)";
+                b1.innerHTML = "🗡️ Кинжалы<br>(+2⚡ Комбо)"; b2.innerHTML = "💥 Бросок топора<br>(-1⚡)"; b3.innerHTML = "🌀 Теневой шаг<br>(-1⚡)"; b4.innerHTML = "🔮 Тройная казнь<br>(-3⚡ Казнь)";
             }
         }
 
@@ -477,13 +474,13 @@ GAME_HTML = """
             document.getElementById('bt-enemy-name').innerText = currentCreep.name;
             document.getElementById('enemy-sprite').innerText = currentCreep.sprite;
             document.getElementById('hero-sprite').innerText = heroData[config.hero].sprite;
-            player.mana = 3; 
-            player.shield = (config.hero === 'тигрил') ? 30 : 0; 
-            document.getElementById('log').innerHTML = "Да начнется бой в Монии!";
+            player.mana = 3; player.shield = (config.hero === 'тигрил') ? 40 : 0;
+            document.getElementById('log').innerHTML = "Враг приближается! Приготовьтесь.";
             setupSkillButtons(); updateBattleUI(); switchScreen('screen-battle');
         }
 
         function updateBattleUI() {
+            player.maxHp = getDynamicMaxHp();
             document.getElementById('player-hp-text').innerText = `${player.hp}/${player.maxHp}`;
             document.getElementById('player-hp-fill').style.width = `${(player.hp / player.maxHp)*100}%`;
             document.getElementById('player-shield-fill').style.width = `${(player.shield / player.maxHp)*100}%`;
@@ -513,50 +510,69 @@ GAME_HTML = """
                 currentCreep.hp = Math.max(0, currentCreep.hp - f); 
                 player.mana = Math.min(player.maxMana, player.mana + (config.hero === 'госсен' ? 2 : 1)); audioPack.hit();
                 if (config.hero === 'алукард') { let v = Math.floor(f*0.25); player.hp = Math.min(player.maxHp, player.hp + v); triggerDamageText(`+${v}`, false); }
-                triggerDamageText(cr ? `💥${f}!` : `-${f}`, true); addLog(`Атака нанесла: ${f} ед.`);
+                triggerDamageText(cr ? `💥${f}!` : `-${f}`, true); addLog(`Вы атаковали: -${f}`);
             } else if (sk === 'atk2') {
                 player.mana -= 1; let f = Math.floor(dmg*1.4) + Math.floor(Math.random()*6); currentCreep.hp = Math.max(0, currentCreep.hp - f);
-                audioPack.hit(); triggerDamageText(`-${f}`, true); addLog(`Навык нанес: ${f} урона!`, '#ff9999');
+                audioPack.hit(); triggerDamageText(`-${f}`, true); addLog(`Навык поразил цель: -${f} ОЗ!`, '#ff9999');
             } else if (sk === 'def') {
-                player.mana -= 1; 
-                let multi = (config.hero === 'тигрил') ? 1.5 : 1.0;
-                let s = Math.floor((16 + (player.armor ? player.armor.stat : 0)) * multi); player.shield += s;
-                audioPack.block(); triggerDamageText(`+🛡️${s}`, false); addLog(`Броня укреплена: +${s}`, '#55aaff');
+                player.mana -= 1; let multi = (config.hero === 'тигрил') ? 1.5 : 1.0;
+                let s = Math.floor((18 + (player.armor ? player.armor.stat : 0)) * multi); player.shield += s;
+                audioPack.block(); triggerDamageText(`+🛡️${s}`, false); addLog(`Защитная стойка: +${s} к броне`, '#55aaff');
             } else if (sk === 'ult') {
-                player.mana -= 3; let f = Math.floor(dmg*2.4) + Math.floor(Math.random()*10); 
+                player.mana -= 3; let f = Math.floor(dmg*2.5) + Math.floor(Math.random()*12); 
                 if (config.hero === 'госсен' && currentCreep.hp < (currentCreep.maxHp / 2)) { f = Math.floor(f * 1.4); }
-                currentCreep.hp = Math.max(0, currentCreep.hp - f); 
-                audioPack.hit();
-                if (config.hero === 'алукард') { let l = Math.floor(f*0.3); player.hp = Math.min(player.maxHp, player.hp + l); triggerDamageText(`+${l}`, false); }
+                currentCreep.hp = Math.max(0, currentCreep.hp - f); audioPack.hit();
+                if (config.hero === 'алукард') { let l = Math.floor(f*0.35); player.hp = Math.min(player.maxHp, player.hp + l); triggerDamageText(`+${l}`, false); }
                 document.getElementById('battle-field').classList.add('flash-red'); setTimeout(() => document.getElementById('battle-field').classList.remove('flash-red'), 200);
-                triggerDamageText(`💥${f}`, true); addLog(`🔮 УЛЬТИМЕЙТ: ${f} сокрушительного урона!`, '#ffff44');
+                triggerDamageText(`💥${f}`, true); addLog(`🔮 УЛЬТИМЕЙТ: нанес ${f} разрушительного урона!`, '#ffff44');
             }
 
             updateBattleUI(); if (currentCreep.hp <= 0) { endBattle(true); return; }
-            gameState.currentTurn = 'enemy'; setTimeout(enemyTurn, 600);
+            gameState.currentTurn = 'enemy'; setTimeout(enemyTurn, 650);
         }
 
+        // ПРОДВИНУТЫЙ ИИ ВРАГОВ (МАСШТАБ 10Х)
         function enemyTurn() {
             if (gameState.isGameOver) return;
             let spr = document.getElementById('enemy-sprite'); spr.classList.add('strike-right'); setTimeout(() => spr.classList.remove('strike-right'), 300);
+            
+            let roll = Math.random();
             let ed = Math.floor(Math.random()*(currentCreep.maxDmg - currentCreep.minDmg + 1)) + currentCreep.minDmg;
-            if (player.shield > 0) { if (player.shield >= ed) { player.shield -= ed; ed = 0; } else { ed -= player.shield; player.shield = 0; } }
-            if (ed > 0) { player.hp = Math.max(0, player.hp - ed); triggerDamageText(`-${ed}`, false); audioPack.hit(); addLog(`Враг нанес: ${ed}`, '#ff4444'); }
-            else { triggerDamageText("Блок", false); audioPack.block(); }
-            updateBattleUI(); if (player.hp <= 0) { endBattle(false); } else { gameState.currentTurn = 'player'; updateBattleUI(); }
+
+            if (currentCreep.ai === 'healer' && currentCreep.hp < (currentCreep.maxHp * 0.4) && roll > 0.4) {
+                let heal = Math.floor(currentCreep.maxHp * 0.25); currentCreep.hp = Math.min(currentCreep.maxHp, currentCreep.hp + heal);
+                triggerDamageText(`+⛲${heal}`, true); audioPack.block(); addLog(`${currentCreep.name} применил Лечение: +${heal}`, '#55ff55');
+            } else if (currentCreep.ai === 'defender' && roll > 0.6) {
+                ed = 0; addLog(`${currentCreep.name} ушел в глухую оборону на этот ход!`, '#8a8ab0');
+                triggerDamageText("Блок", false); audioPack.block();
+            } else if ((currentCreep.ai === 'furious' || currentCreep.ai === 'boss') && roll > 0.7) {
+                ed = Math.floor(ed * 1.7);
+                addLog(`💥 КРИТИЧЕСКИЙ НАВЫК ВРАГА!`, '#ff2222');
+            }
+
+            if (ed > 0) {
+                if (player.shield > 0) { if (player.shield >= ed) { player.shield -= ed; ed = 0; } else { ed -= player.shield; player.shield = 0; } }
+                if (ed > 0) { player.hp = Math.max(0, player.hp - ed); triggerDamageText(`-${ed}`, false); audioPack.hit(); addLog(`Враг ранил вас на: ${ed}`, '#ff4444'); }
+                else { triggerDamageText("Блок", false); audioPack.block(); }
+            }
+
+            updateBattleUI(); 
+            if (player.hp <= 0) { endBattle(false); } else { gameState.currentTurn = 'player'; updateBattleUI(); }
         }
 
         function endBattle(win) {
             gameState.isGameOver = true; combatActive = false;
             if (win) {
                 audioPack.lvlUp(); player.gold += currentCreep.gold; player.exp += currentCreep.exp;
-                alert(`✌️ Победили крипа! Награда: +${currentCreep.gold}💰 | +${currentCreep.exp} EXP`); zones[currentZone].map[playerY][playerX] = 0;
-                if (player.exp >= player.nextExp) { player.lvl++; player.exp -= player.nextExp; player.nextExp = Math.floor(player.nextExp*1.35); player.baseDmg += 4; player.maxHp += 12; player.hp = player.maxHp; alert("✨ НОВЫЙ УРОВЕНЬ ДОСТИГНУТ!"); }
+                alert(`✌️ Победа! Получено: +${currentCreep.gold}💰 | +${currentCreep.exp} EXP`); zones[currentZone].map[playerY][playerX] = 0;
+                if (player.exp >= player.nextExp) { 
+                    player.lvl++; player.exp -= player.nextExp; player.nextExp = Math.floor(player.nextExp*1.4); 
+                    player.baseDmg += 5; player.hp = player.maxHp = getDynamicMaxHp(); alert("✨ ВАШ УРОВЕНЬ ПОВЫШЕН!"); 
+                }
                 renderMap(); switchScreen('screen-adventure');
-            } else { alert("💀 Герой пал в бою... Одиссея начинается заново."); switchScreen('screen-menu'); }
+            } else { alert("💀 Легендарный герой пал. Мония погрузилась во тьму. Попробуйте снова!"); switchScreen('screen-menu'); }
         }
         
-        // Первичная инициализация описания при запуске страницы
         updateSettingsUI();
     </script>
 </body>
