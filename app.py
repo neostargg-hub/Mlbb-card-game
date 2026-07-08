@@ -3,435 +3,467 @@ import os
 
 app = Flask(__name__)
 
-# Весь код игры обернут в raw, чтобы Flask не конфликтовал с JavaScript
-GAME_HTML = """{% raw %}
+GAME_HTML = """
+{% raw %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MLBB RPG: ULTIMATE NEXUS</title>
+    <title>MLBB RPG: Симфония Рассвета v16.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root { 
-            --bg: #030308; --panel: rgba(15, 15, 25, 0.95); --border: #445588; 
+            --bg: #020206; --panel: rgba(10, 10, 26, 0.88); --border: #3a4a6b; 
             --acc: #00ffff; --hp: #ff3344; --mana: #33ccff; --gold: #ffdd33;
             --dust: #cc44ff; --exp: #33ff55;
         }
-        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
         body { 
             font-family: 'Press Start 2P', cursive; background: var(--bg); color: #e0e0f0; 
             margin: 0; padding: 0; font-size: 8px; text-align: center; overflow: hidden; 
             height: 100vh; width: 100vw; display: flex; justify-content: center; align-items: center;
         }
         
-        #game-wrapper { 
-            width: 100%; max-width: 1000px; height: 100%; max-height: 100vh;
-            background: radial-gradient(circle at center, #111122 0%, #030308 100%);
-            border: 2px solid var(--border); box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
-            position: relative; display: flex; flex-direction: column; overflow: hidden;
-        }
+        #bg-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
 
-        /* Адаптация под полный экран телефона */
-        :fullscreen #game-wrapper, :-webkit-full-screen #game-wrapper { border: none; }
-
-        .screen { display: none; height: 100%; width: 100%; padding: 8px; }
-        .screen.active { display: flex; flex-direction: row; gap: 8px; animation: fade 0.3s ease-out; }
-        @keyframes fade { from { opacity: 0; filter: blur(4px); } to { opacity: 1; filter: blur(0); } }
-
-        /* ИДЕАЛЬНОЕ УПРАВЛЕНИЕ: ДВА ПУЛЬТА ПО БОКАМ, ЭКРАН ПО ЦЕНТРУ */
-        .side-controls { 
-            width: 80px; height: 100%; display: flex; flex-direction: column; 
-            justify-content: center; gap: 8px; flex-shrink: 0; z-index: 10;
+        #game { 
+            width: 100%; max-width: 980px; height: 100%; max-height: 480px;
+            border: 3px solid var(--acc); box-shadow: 0 0 35px rgba(0, 255, 255, 0.3);
+            padding: 8px; position: relative; display: flex; flex-direction: row; gap: 10px; z-index: 10;
+            background: rgba(3, 3, 10, 0.5); backdrop-filter: blur(4px); border-radius: 8px;
         }
-        .center-view { 
-            flex-grow: 1; height: 100%; display: flex; flex-direction: column; 
-            justify-content: space-between; overflow: hidden; position: relative;
-        }
+        
+        :fullscreen #game, :-webkit-full-screen #game { border: none; max-width: 100vw; max-height: 100vh; border-radius: 0; }
 
-        /* Кнопки геймпада */
-        .btn-pad {
-            background: linear-gradient(180deg, #25254a, #15152b); border: 2px solid #5566aa;
-            color: #fff; font-family: 'Press Start 2P', cursive; font-size: 16px;
-            padding: 16px 0; border-radius: 8px; cursor: pointer; box-shadow: 0 6px 0 #0a0a14;
-            transition: 0.1s; display: flex; align-items: center; justify-content: center;
-        }
-        .btn-pad:active { transform: translateY(4px); box-shadow: 0 2px 0 #0a0a14; background: #111122; color: var(--acc); border-color: var(--acc); }
-        .btn-action { font-size: 10px; padding: 12px 0; background: linear-gradient(180deg, #4a153a, #2b0b22); border-color: #aa5588; }
-        .btn-action:active { color: var(--gold); border-color: var(--gold); }
+        .screen { display: none; height: 100%; width: 100%; }
+        .screen.active { display: flex; flex-direction: row; gap: 10px; animation: fade 0.4s ease-out; }
+        @keyframes fade { from { opacity: 0; transform: scale(0.99); } to { opacity: 1; transform: scale(1); } }
 
-        /* Обычные кнопки UI */
-        .btn-ui {
-            background: #1c2c4a; border: 2px solid var(--border); color: #fff; padding: 12px;
-            font-family: inherit; font-size: 8px; cursor: pointer; border-radius: 4px;
-            box-shadow: 0 4px 0 #0a0a14; transition: 0.1s; text-transform: uppercase; width: 100%; margin: 4px 0;
-        }
-        .btn-ui:active { transform: translateY(2px); box-shadow: 0 2px 0 #0a0a14; }
-        .btn-ui.glow { border-color: var(--acc); color: var(--acc); box-shadow: 0 4px 0 #005555, 0 0 10px rgba(0,255,255,0.4); }
+        /* ИДЕАЛЬНАЯ СИММЕТРИЧНАЯ СЕТКА УПРАВЛЕНИЯ */
+        .side-pad-l, .side-pad-r { width: 22%; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+        .center-view { width: 56%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
 
-        .panel { background: var(--panel); border: 2px solid var(--border); border-radius: 6px; padding: 8px; box-shadow: inset 0 0 15px rgba(0,0,0,0.8); }
+        h1 { font-size: 11px; color: var(--acc); text-shadow: 0 0 10px var(--acc); margin: 4px 0; text-transform: uppercase; }
+        .panel { background: var(--panel); border: 2px solid var(--border); padding: 8px; border-radius: 6px; position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.6); }
+        
+        .btn { 
+            background: linear-gradient(#1c2c4a, #0f1f2f); border: 2px outset #5588aa; color: #fff; padding: 10px; 
+            margin: 2px 0; cursor: pointer; font-family: 'Press Start 2P', cursive; font-size: 7px; text-transform: uppercase; width: 100%;
+            border-radius: 4px; box-shadow: 0 3px 0 #000;
+        }
+        .btn:active { border-style: inset; transform: translateY(2px); box-shadow: 0 1px 0 #000; }
+        .btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none !important; box-shadow: 0 3px 0 #000 !important; }
+        .btn-acc { color: var(--acc); border-color: var(--acc); }
 
-        /* Карта (Вьюпорт) */
-        #viewport {
-            flex-grow: 1; border: 3px solid #445588; background: #000; border-radius: 8px;
-            position: relative; overflow: hidden; box-shadow: inset 0 0 40px #000;
+        /* Кнопки геймпада по бокам экрана */
+        .pad-btn { 
+            font-family: 'Press Start 2P', cursive; font-size: 14px; color: #fff;
+            background: #181835; border: 2px outset #445588; border-radius: 8px;
+            padding: 13px 0; width: 100%; cursor: pointer; box-shadow: 0 4px 0 #000;
         }
-        #map-container { position: absolute; transition: transform 0.15s linear; }
-        .map-row { display: flex; }
-        .tile { 
-            width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-            font-size: 20px; background: #0a140a; border: 1px solid #111a11; text-shadow: 0 2px 5px rgba(0,0,0,0.8);
-        }
-        .tile.wall { background: #0a0a10; border-color: #05050a; color: #1a1a24; }
-        .tile.fog { background: #000; filter: brightness(0); border-color: #000; }
-        .tile.dim { filter: brightness(0.4); }
+        .pad-btn:active { border-style: inset; background: #080811; transform: translateY(2px); box-shadow: 0 1px 0 #000; color: var(--acc); }
+        .pad-action { background: #38153d; border-color: #994499; font-size: 6.5px; padding: 10px 0; }
 
         /* Прогресс-бары */
-        .bar { width: 100%; height: 14px; background: #111; border: 1px solid #555; position: relative; border-radius: 3px; margin: 2px 0; overflow: hidden; }
+        .bar { width: 100%; height: 11px; background: #111; border: 2px solid #fff; position: relative; margin: 2px 0; border-radius: 2px; }
         .fill { height: 100%; transition: width 0.2s ease; }
-        .bar-txt { position: absolute; width: 100%; text-align: center; top: 2px; left: 0; font-size: 7px; color: #fff; text-shadow: 1px 1px 0 #000; }
+        .bar-txt { position: absolute; width: 100%; text-align: center; top: 1px; left: 0; font-size: 6px; color: #fff; text-shadow: 1px 1px #000; font-weight: bold; }
 
-        /* Боевая арена */
-        #battle-stage { 
-            flex-grow: 1; border: 3px solid #882222; border-radius: 8px; background: linear-gradient(to top, #1a0a0a, #05050a);
-            position: relative; overflow: hidden; box-shadow: inset 0 0 50px #000;
+        /* Камера и Вьюпорт карт */
+        #viewport { 
+            width: 100%; flex-grow: 1; border: 2px solid var(--border); 
+            background: #000; position: relative; overflow: hidden; border-radius: 6px;
+            box-shadow: inset 0 0 25px #000;
         }
-        .fighter { position: absolute; bottom: 15px; font-size: 60px; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.8)); transition: 0.2s; }
-        #f-player { left: 15%; transform: scaleX(-1); }
-        #f-enemy { right: 15%; }
-        
-        .dmg-pop { position: absolute; font-size: 14px; font-weight: bold; text-shadow: 2px 2px 0 #000; pointer-events: none; z-index: 100; animation: pop 1s forwards ease-out; }
-        @keyframes pop { 0% { opacity: 1; transform: translateY(0) scale(0.5); } 20% { transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-60px) scale(1); } }
+        #map-container { position: absolute; transition: transform 0.15s cubic-bezier(0.1, 0.8, 0.1, 1); }
+        .map-row { display: flex; }
+        .tile { 
+            width: 32px; height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; 
+            font-size: 15px; background: rgba(10, 20, 10, 0.3); border: 1px solid rgba(40,60,40,0.1);
+        }
+        .tile.wall { background: #0b0b14; border-color: #000; color: #223; }
+        .tile.fog { background: #000 !important; filter: brightness(0); border-color: #000 !important; }
+        .tile.dim { filter: brightness(0.4); }
 
-        /* Лог и тосты */
-        #log-box { height: 60px; overflow-y: auto; font-size: 6px; text-align: left; color: #aaa; line-height: 1.5; padding: 4px; }
-        #toasts { position: absolute; top: 10px; width: 100%; display: flex; flex-direction: column; align-items: center; z-index: 1000; pointer-events: none; gap: 4px; }
-        .toast { background: rgba(0,0,0,0.9); border: 2px solid var(--acc); color: #fff; padding: 10px 20px; font-size: 8px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,255,255,0.3); animation: tAnim 2.5s forwards; }
-        @keyframes tAnim { 0%, 100% { opacity: 0; transform: translateY(-20px); } 10%, 90% { opacity: 1; transform: translateY(0); } }
+        /* Сюжетный блок Кат-сцен */
+        .story-box { min-height: 105px; background: rgba(0,0,0,0.9); border: 2px double var(--acc); padding: 10px; text-align: left; position: relative; border-radius: 4px; }
+        .speaker-tag { position: absolute; top: -9px; left: 10px; background: var(--acc); color: #000; padding: 2px 6px; font-size: 6px; font-weight: bold; }
+
+        /* Боевой экран */
+        .stage { position: relative; height: 120px; background: rgba(5,5,15,0.7); border: 2px solid #5a2222; border-radius: 6px; overflow: hidden; }
+        .fighter { position: absolute; bottom: 10px; font-size: 50px; transition: transform 0.15s ease; width: 55px; height: 50px; display: flex; align-items: center; justify-content: center; }
+        #player-sprite { left: 15%; transform: scaleX(-1); } #enemy-sprite { right: 15%; }
+        .floating-text { position: absolute; font-size: 10px; font-weight: bold; text-shadow: 1px 1px #000; animation: floatUp 1s forwards; pointer-events: none; z-index: 100; }
+        #battle-log { height: 75px; overflow-y: auto; background: #000; color: #4aff4a; padding: 4px; text-align: left; border: 1px solid #223; font-size: 6px; line-height: 1.5; }
+        #toasts { position: absolute; top: 10px; width: 100%; display: flex; flex-direction: column; align-items: center; pointer-events: none; z-index: 4000; }
+        .toast { background: rgba(5,10,25,0.95); border: 2px solid var(--acc); color: #fff; padding: 8px 14px; margin-bottom: 3px; border-radius: 4px; font-size: 7px; animation: tAnim 2.2s forwards; }
 
         /* Инвентарь */
-        .inv-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 4px; overflow-y: auto; max-height: 180px;}
-        .inv-slot { aspect-ratio: 1; background: #000; border: 2px solid #334; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; border-radius: 4px; position: relative; }
-        .inv-slot:hover { border-color: #fff; }
-        .inv-lvl { position: absolute; bottom: 2px; right: 2px; font-size: 6px; background: rgba(0,0,0,0.8); padding: 2px; color: #fff; }
-        
-        .t-0 { border-color: #777; } .t-1 { border-color: #5f5; box-shadow: inset 0 0 5px #5f5; } 
-        .t-2 { border-color: #55f; box-shadow: inset 0 0 10px #55f; } .t-3 { border-color: #a3f; box-shadow: inset 0 0 15px #a3f; } 
-        .t-4 { border-color: #fa0; box-shadow: inset 0 0 20px #fa0; } .t-5 { border-color: #f33; box-shadow: inset 0 0 25px #f33; animation: blink 1.5s infinite; }
-        @keyframes blink { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.5); } }
+        .inv-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 4px 0; }
+        .inv-slot { aspect-ratio: 1; background: #04040d; border: 2px solid #334; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; border-radius: 4px; }
+        .tier-3 { border-color: #fa0; box-shadow: inset 0 0 6px #fa0; }
 
-        /* Модалка */
-        #modal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 500; justify-content: center; align-items: center; }
-        .modal-box { background: var(--panel); border: 2px solid var(--acc); padding: 15px; border-radius: 8px; max-width: 400px; width: 90%; box-shadow: 0 0 40px rgba(0,255,255,0.2); }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-40px) scale(1.2); } }
+        @keyframes tAnim { 0%, 100% { opacity: 0; transform: translateY(-10px); } 10%, 90% { opacity: 1; transform: translateY(0); } }
+        .breathe-anim { animation: bth 2.5s infinite ease-in-out; }
+        @keyframes bth { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
     </style>
 </head>
 <body>
-
-<div id="game-wrapper">
-    <div id="toasts"></div>
+    <canvas id="bg-canvas"></canvas>
     
-    <div id="modal">
-        <div class="modal-box" id="modal-content"></div>
-    </div>
-
-    <!-- ==================== ЭКРАН 1: ГЛАВНОЕ МЕНЮ ==================== -->
-    <div id="scr-menu" class="screen active" style="flex-direction: column; justify-content: center; align-items: center;">
-        <h1 style="font-size: 32px; line-height: 1.2;">MLBB RPG<br><span style="color:#fff; font-size: 14px;">ULTIMATE NEXUS</span></h1>
-        <div style="font-size: 80px; margin: 20px 0; filter: drop-shadow(0 0 20px var(--acc));">🌌</div>
-        <div style="width: 100%; max-width: 300px; display: flex; flex-direction: column; gap: 8px;">
-            <button class="btn-ui glow" style="font-size: 12px; padding: 16px;" onclick="Game.initNew()">НОВАЯ ИГРА</button>
-            <button class="btn-ui" onclick="Game.load()">ПРОДОЛЖИТЬ ИГРУ</button>
-            <button class="btn-ui" onclick="UI.show('scr-hero')">ВЫБОР ГЕРОЯ</button>
-            <button class="btn-ui" style="background:#223;" onclick="UI.fullscreen()">ПОЛНЫЙ ЭКРАН 🔲</button>
+    <div id="game">
+        <div id="toasts"></div>
+        <div id="modal" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:500; display:none; justify-content:center; align-items:center;">
+            <div class="panel" id="modal-body" style="max-width:340px; text-align:center;"></div>
         </div>
-    </div>
 
-    <!-- ==================== ЭКРАН 2: ВЫБОР ГЕРОЯ ==================== -->
-    <div id="scr-hero" class="screen" style="flex-direction: column; justify-content: center; align-items: center;">
-        <h1 style="color:var(--mana)">ВЫБОР ЧЕМПИОНА</h1>
-        <div class="panel" style="width: 100%; max-width: 400px; display: flex; align-items: center; justify-content: space-between; margin: 20px 0;">
-            <button class="btn-ui" style="width: 60px; font-size: 16px;" onclick="Game.switchHero(-1)">◀</button>
-            <div id="hero-display-spr" style="font-size: 80px; filter: drop-shadow(0 0 10px #fff);">⚔️</div>
-            <button class="btn-ui" style="width: 60px; font-size: 16px;" onclick="Game.switchHero(1)">▶</button>
-        </div>
-        <div class="panel" id="hero-display-info" style="width: 100%; max-width: 400px; text-align: left; line-height: 1.8;"></div>
-        <button class="btn-ui glow" style="max-width: 400px; margin-top: 10px;" onclick="UI.show('scr-menu')">В МЕНЮ</button>
-    </div>
-
-    <!-- ==================== ЭКРАН 3: КАРТА И ПРИКЛЮЧЕНИЕ ==================== -->
-    <div id="scr-adv" class="screen">
-        <!-- ЛЕВЫЙ ПУЛЬТ -->
-        <div class="side-controls">
-            <button class="pad-btn" onclick="Map.move(0, -1)">▲</button>
-            <button class="pad-btn" onclick="Map.move(-1, 0)">◀</button>
-            <button class="pad-btn" onclick="Map.move(0, 1)">▼</button>
-            <button class="pad-btn action-btn" onclick="Camp.open()">🎒 СУМКА</button>
-        </div>
-        
-        <!-- ЦЕНТРАЛЬНАЯ КАРТА -->
-        <div class="center-view">
-            <div class="panel" style="display:flex; justify-content:space-between; padding:6px; font-size:8px; margin:0;">
-                <span style="color:var(--hp)">❤️ <span id="ui-hp"></span></span>
-                <span style="color:var(--gold)">💰 <span id="ui-gld"></span></span>
-                <span style="color:var(--mana)">Этаж <span id="ui-flr"></span></span>
+        <div id="scr-menu" class="screen active">
+            <div class="side-pad-l" style="width: 45%; justify-content: center;">
+                <h1>MLBB RPG</h1>
+                <p style="font-size:6px; color:var(--acc);">СИМФОНИЯ РАССВЕТА</p>
+                <div style="font-size:65px; margin:10px 0; animation: bth 3s infinite alternate;">💎</div>
             </div>
-            
-            <div id="viewport"><div id="map-container"></div></div>
-            
-            <div class="panel" style="padding:4px 8px; font-size:6.5px; color:#aaa; margin:0; display:flex; justify-content:space-between;">
-                <span>Кирки: <span id="ui-pick" style="color:#fff"></span>⛏️</span>
-                <span>Ключи: <span id="ui-key" style="color:#fff"></span>🗝️</span>
+            <div class="side-pad-r" style="width: 50%; justify-content: center;">
+                <button class="btn btn-acc" onclick="Game.start()">НОВАЯ ИГРА</button>
+                <button class="btn" onclick="Game.load()">ЗАГРУЗИТЬ АВТОСОХРАНЕНИЕ</button>
+                <button class="btn" onclick="UI.openHeroSelect()">ВЫБОР КЛАССА</button>
+                <button class="btn" style="background:#151525;" onclick="UI.toggleFullscreen()">ПОЛНЫЙ ЭКРАН 🔲</button>
             </div>
         </div>
-        
-        <!-- ПРАВЫЙ ПУЛЬТ -->
-        <div class="side-controls">
-            <button class="pad-btn" onclick="Map.move(0, -1)">▲</button>
-            <button class="pad-btn" onclick="Map.move(1, 0)">▶</button>
-            <button class="pad-btn" onclick="Map.move(0, 1)">▼</button>
-            <button class="pad-btn action-btn" style="background:#4a1111; border-color:#883333;" onclick="Game.saveAndExit()">🚪 ВЫХОД</button>
-        </div>
-    </div>
 
-    <!-- ==================== ЭКРАН 4: ЛАГЕРЬ И ИНВЕНТАРЬ ==================== -->
-    <div id="scr-camp" class="screen">
-        <div class="center-view" style="width: 48%; flex-grow: 0;">
-            <div class="panel">
-                <h2 style="color:var(--acc); font-size:12px; margin:0 0 8px 0;" id="c-name">ГЕРОЙ</h2>
-                <div class="bar"><div id="c-xp-bar" class="fill" style="background:var(--exp);"></div><div class="bar-txt">ОПЫТ: <span id="c-xp-txt"></span></div></div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; text-align:left; font-size:8px; margin-top:8px;">
-                    <div>УРОВЕНЬ: <span id="c-lvl" style="color:var(--acc)"></span></div>
-                    <div>ОЗ: <span id="c-hp" style="color:var(--hp)"></span></div>
-                    <div>АТАКА: <span id="c-dmg" style="color:var(--gold)"></span></div>
-                    <div>БРОНЯ: <span id="c-def" style="color:var(--mana)"></span></div>
+        <div id="scr-hero" class="screen">
+            <div class="side-pad-l" style="width:35%;">
+                <h1>ГЕРОИ</h1>
+                <div style="display:flex; gap:4px;">
+                    <button class="btn" onclick="Game.cycleHero(-1)">◀</button>
+                    <button class="btn" onclick="Game.cycleHero(1)">▶</button>
                 </div>
-                <div style="margin-top:10px; border-top:1px solid #334; padding-top:10px;">
-                    <p style="color:var(--gold); font-size:7px; margin-bottom:6px;">Очки прокачки: <span id="c-sp"></span></p>
-                    <div style="display:flex; gap:4px;">
-                        <button class="btn-ui" onclick="Game.addStat('dmg')">+⚔️ Атака</button>
-                        <button class="btn-ui" onclick="Game.addStat('hp')">+❤️ Здоровье</button>
+                <div id="hero-show-sprite" style="font-size:75px; margin-top:15px; animation: bth 2.5s infinite;">⚔️</div>
+            </div>
+            <div class="side-pad-r" style="width:62%;">
+                <div id="hero-show-info" class="panel" style="text-align:left; line-height:1.6; font-size:7px; height:100%; overflow-y:auto;"></div>
+                <button class="btn btn-acc" onclick="UI.show('scr-menu')">СОХРАНИТЬ ВЫБОР</button>
+            </div>
+        </div>
+
+        <div id="scr-story" class="screen">
+            <div class="center-view" style="width:100%; height:100%; justify-content:center; gap:8px;">
+                <h1 id="story-title">ГЛАВА</h1>
+                <div class="story-box">
+                    <div id="story-speaker" class="speaker-tag">Рассказчик</div>
+                    <div id="story-text" class="bar-text" style="position:static; text-align:left; line-height:1.6; font-size:8px;">...</div>
+                </div>
+                <button id="story-next-btn" class="btn btn-acc" style="max-width:180px; margin:0 auto;" onclick="Cutscene.next()">ДАЛЕЕ >></button>
+            </div>
+        </div>
+
+        <div id="scr-adv" class="screen">
+            <div class="side-pad-l">
+                <button class="pad-btn" onclick="Map.move(0, -1)">▲</button>
+                <button class="pad-btn" onclick="Map.move(-1, 0)">◀</button>
+                <button class="pad-btn" onclick="Map.move(0, 1)">▼</button>
+                <button class="pad-btn pad-action" onclick="Camp.open()">🎒 СУМКА</button>
+            </div>
+            
+            <div class="center-view">
+                <div class="panel" style="display:grid; grid-template-columns: 1fr 1fr 1fr; font-size:6.5px; padding:4px; margin:0; text-align:center;">
+                    <div style="color:var(--hp)">❤️ HP:<span id="a-hp"></span></div>
+                    <div style="color:var(--gold)">💰 GLD:<span id="a-gld"></span></div>
+                    <div style="color:var(--mana)">🔮 ЯРУС:<span id="a-floor"></span></div>
+                </div>
+                <div id="viewport"><div id="map-container"></div></div>
+                <div class="panel" style="padding:4px; font-size:5.5px; color:#aaa; margin:0; display:flex; justify-content:space-between;">
+                    <span>Кирки: <span id="a-picks" style="color:#fff"></span> ⛏️ | Ключи: <span id="a-keys" style="color:#fff"></span> 🗝️</span>
+                    <span id="a-chapter-name" style="color:var(--acc)"></span>
+                </div>
+            </div>
+            
+            <div class="side-pad-r">
+                <button class="pad-btn" onclick="Map.move(0, -1)">▲</button>
+                <button class="pad-btn" onclick="Map.move(1, 0)">▶</button>
+                <button class="pad-btn" onclick="Map.move(0, 1)">▼</button>
+                <button class="pad-btn pad-action" onclick="UI.show('scr-quests')">📜 КВЕСТЫ</button>
+            </div>
+        </div>
+
+        <div id="scr-camp" class="screen">
+            <div class="side-pad-l" style="width:30%;">
+                <h2>ГЕРОЙ</h2>
+                <div class="panel" style="text-align:left; font-size:6px; line-height:1.4;">
+                    <p style="color:var(--mana)">КЛАСС: <span id="c-name"></span></p>
+                    <p>УРОВЕНЬ: <span id="c-lvl"></span></p>
+                    <p>АТАКА: <span id="c-dmg" style="color:var(--hp)"></span></p>
+                    <p>ЗАЩИТА: <span id="c-def" style="color:var(--mana)"></span></p>
+                    <p>Очки: <span id="c-sp" style="color:var(--gold)">0</span></p>
+                </div>
+                <div style="display:flex; gap:2px;">
+                    <button class="btn" style="font-size:6px; padding:6px;" onclick="Game.addStat('dmg')">+⚔️ Сила</button>
+                    <button class="btn" style="font-size:6px; padding:6px;" onclick="Game.addStat('hp')">+❤️ Жизнь</button>
+                </div>
+            </div>
+            <div class="center-view" style="width:68%;">
+                <div class="panel">
+                    <div style="display:flex; justify-content:space-around; margin-bottom:4px;">
+                        <div class="inv-slot" id="eq-w" style="width:45%; font-size:7px;" onclick="Camp.unequip('w')">⚔️ Оружие</div>
+                        <div class="inv-slot" id="eq-a" style="width:45%; font-size:7px;" onclick="Camp.unequip('a')">🛡️ Доспех</div>
                     </div>
+                    <div style="display:flex; justify-content:space-between; font-size:6px; color:#aaa; margin-bottom:2px;">
+                        <span>РЮКЗАК ПЕРСОНАЖА</span><span>Пыль: <span id="c-dust" style="color:var(--dust)">0</span>💎</span>
+                    </div>
+                    <div class="inv-grid" id="inventory-container"></div>
                 </div>
-            </div>
-            <div class="panel" style="flex-grow:1; display:flex; flex-direction:column; justify-content:center;">
-                <h2 style="margin:0 0 10px 0;">НАДЕТО</h2>
-                <div style="display:flex; justify-content:center; gap:10px;">
-                    <div class="inv-slot" id="eq-w" onclick="Camp.uneq('w')">⚔️</div>
-                    <div class="inv-slot" id="eq-a" onclick="Camp.uneq('a')">🛡️</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
+                    <button class="btn" style="color:var(--dust)" onclick="Camp.craft()">🔨 КУЗНИЦА (25 Пыли)</button>
+                    <button class="btn" style="color:var(--hp)" onclick="Camp.buyPotion()">🧪 ЗЕЛЬЕ ОЗ (15💰)</button>
                 </div>
+                <button class="btn" style="background:#222; margin-top:2px;" onclick="UI.show('scr-adv')">ВЕРНУТЬСЯ НА КАРТУ</button>
             </div>
         </div>
-        
-        <div class="center-view" style="width: 50%;">
-            <div class="panel" style="flex-grow:1; display:flex; flex-direction:column;">
-                <div style="display:flex; justify-content:space-between; font-size:8px; margin-bottom:4px;">
-                    <span>СУМКА</span><span>Пыль: <span id="c-dust" style="color:var(--dust)"></span>💎</span>
-                </div>
-                <div class="inv-grid" id="inv-container"></div>
-            </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                <button class="btn-ui" style="background:#313; border-color:var(--dust);" onclick="Camp.craft()">🛠️ КУЗНЯ (30💎)</button>
-                <button class="btn-ui" style="background:#131; border-color:var(--hp);" onclick="Camp.heal()">🧪 ЗЕЛЬЕ (50💰)</button>
-            </div>
-            <button class="btn-ui glow" style="padding:16px;" onclick="UI.show('scr-adv')">ВЕРНУТЬСЯ НА КАРТУ</button>
-        </div>
-    </div>
 
-    <!-- ==================== ЭКРАН 5: БОЙ ==================== -->
-    <div id="scr-battle" class="screen">
-        <div class="side-controls">
-            <!-- Левые боевые хоткеи для пальца -->
-            <button class="pad-btn" style="background:#422;" onclick="Combat.act(1)">⚔️<br><span style="font-size:6px; margin-top:4px; display:block;">УДАР</span></button>
-            <button class="pad-btn" style="background:#224;" onclick="Combat.act(2)">✨<br><span style="font-size:6px; margin-top:4px; display:block;">СКИЛЛ</span></button>
-        </div>
-        
-        <div class="center-view">
-            <div class="panel" style="display:flex; justify-content:space-between; font-size:8px; padding:6px; margin:0;">
-                <span id="b-pname" style="color:var(--mana);">ГЕРОЙ</span>
-                <span style="color:#666">VS</span>
-                <span id="b-ename" style="color:var(--hp);">ВРАГ</span>
+        <div id="scr-battle" class="screen">
+            <div class="side-pad-l">
+                <button class="pad-btn" style="background:#422;" onclick="Combat.act(1)">⚔️<br><span style="font-size:5px;">УДАР</span></button>
+                <button class="pad-btn" style="background:#224;" onclick="Combat.act(2)">✨<br><span style="font-size:5px;">СКИЛЛ</span></button>
             </div>
             
-            <div id="battle-stage">
-                <div id="f-player" class="fighter idle-anim">🏃‍♂️</div>
-                <div id="f-enemy" class="fighter idle-anim">👾</div>
+            <div class="center-view">
+                <div class="panel" style="display:flex; justify-content:space-between; font-size:7px; padding:4px; margin:0;">
+                    <span id="b-pname" style="color:var(--mana);">ГЕРОЙ</span>
+                    <span style="color:#555">VS</span>
+                    <span id="b-ename" style="color:var(--hp);">ВРАГ</span>
+                </div>
+                
+                <div class="stage" id="bat-stage">
+                    <div id="player-sprite" class="fighter breathe-anim">⚔️</div>
+                    <div id="enemy-sprite" class="fighter breathe-anim">👾</div>
+                </div>
+                
+                <div class="panel" style="margin:0; padding:4px;">
+                    <div class="bar"><div id="b-php-bar" class="fill" style="background:#2c2; width:100%;"></div><div class="bar-txt" id="b-php-txt"></div></div>
+                    <div class="bar"><div id="b-ehp-bar" class="fill" style="background:var(--hp); width:100%;"></div><div class="bar-txt" id="b-ehp-txt"></div></div>
+                </div>
+                <div id="battle-log" class="panel" style="margin:0; flex-grow:1;"></div>
             </div>
             
-            <div class="panel" style="margin:0; padding:6px;">
-                <div class="bar"><div id="b-php-bar" class="fill" style="background:#2c2;"></div><div class="bar-txt" id="b-php-txt"></div></div>
-                <div class="bar"><div id="b-ehp-bar" class="fill" style="background:var(--hp);"></div><div class="bar-txt" id="b-ehp-txt"></div></div>
+            <div class="side-pad-right side-pad" style="width:23%;">
+                <button class="pad-btn" style="background:#242;" onclick="Combat.act(3)">🛡️<br><span style="font-size:6px;">БЛОК</span></button>
+                <button class="pad-btn" style="background:#440; border-color:var(--acc);" onclick="Combat.act(4)">☄️<br><span style="font-size:6px; color:var(--acc);">УЛЬТ</span></button>
             </div>
-            
-            <div id="log-box" class="panel" style="flex-grow:1; margin:0;"></div>
         </div>
-        
-        <div class="side-controls">
-            <!-- Правые боевые хоткеи для пальца -->
-            <button class="pad-btn" style="background:#242;" onclick="Combat.act(3)">🛡️<br><span style="font-size:6px; margin-top:4px; display:block;">БЛОК</span></button>
-            <button class="pad-btn glow" style="background:#440; border-color:var(--acc);" onclick="Combat.act(4)">☄️<br><span style="font-size:6px; margin-top:4px; display:block; color:var(--acc);">УЛЬТ</span></button>
-        </div>
-    </div>
 
-</div>
+        <div id="scr-quests" class="screen">
+            <div class="col-center" style="width:100%; height:100%;">
+                <h1>СПИСОК КОНТРАКТОВ МОНИИ</h1>
+                <div class="panel" id="quest-list" style="flex:1; overflow-y:auto; text-align:left; line-height:1.6; font-size:8px;"></div>
+                <button class="btn" onclick="UI.show('scr-adv')">ВЕРНУТЬСЯ К БИТВАМ</button>
+            </div>
+        </div>
+
+    </div>
 
 <script>
-// ==================== АУДИО ДВИЖОК ====================
-const Snd = {
+// ==================== ПРОЦЕДУРНЫЙ КАРТИННЫЙ ДВИЖОК BACKGROUND ====================
+const FX = {
+    canvas: null, ctx: null, particles: [], currentZone: 0,
+    init() {
+        this.canvas = document.getElementById('bg-canvas'); this.ctx = this.canvas.getContext('2d');
+        this.resize(); window.addEventListener('resize', () => this.resize());
+        setInterval(() => this.tick(), 40);
+    },
+    resize() { this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight; },
+    addSparks(x, y, color, count) {
+        for(let i=0; i<count; i++) { this.particles.push({ x, y, vx: (Math.random()-0.5)*8, vy: (Math.random()-0.5)*8 - 2, life: 1, color, sz: Math.random()*2+2 }); }
+    },
+    tick() {
+        let w = this.canvas.width, h = this.canvas.height; this.ctx.clearRect(0, 0, w, h);
+        
+        let grad = this.ctx.createLinearGradient(0, 0, 0, h);
+        if(this.currentZone === 0) { grad.addColorStop(0, '#041c04'); grad.addColorStop(1, '#010801'); }
+        else if(this.currentZone === 1) { grad.addColorStop(0, '#150326'); grad.addColorStop(1, '#06010d'); }
+        else if(this.currentZone === 2) { grad.addColorStop(0, '#09152b'); grad.addColorStop(1, '#020614'); }
+        else if(this.currentZone === 3) { grad.addColorStop(0, '#1c1203'); grad.addColorStop(1, '#0a0601'); }
+        else { grad.addColorStop(0, '#260404'); grad.addColorStop(1, '#0d0101'); }
+        
+        this.ctx.fillStyle = grad; this.ctx.fillRect(0, 0, w, h);
+
+        // Падающие пиксельные погодные эффекты на картине
+        if(Math.random() < 0.2) {
+            if(this.currentZone === 0) this.particles.push({ x: Math.random()*w, y: -10, vx: -1, vy: 2, life: 1, color: '#ffb6c1', sz: 3 }); // Лепестки сакуры
+            if(this.currentZone === 2) this.particles.push({ x: Math.random()*w, y: -10, vx: 0, vy: 3, life: 1, color: '#ffffff', sz: 2 }); // Пиксельный Снегопад
+            if(this.currentZone === 4) this.particles.push({ x: Math.random()*w, y: h+10, vx: (Math.random()-0.5)*2, vy: -3, life: 1, color: '#ff5500', sz: 2 }); // Искры магмы
+        }
+
+        for(let i=this.particles.length-1; i>=0; i--) {
+            let p = this.particles[i]; p.x += p.vx; p.y += p.vy; p.life -= 0.015;
+            if(p.life <= 0) { this.particles.splice(i, 1); continue; }
+            this.ctx.globalAlpha = p.life; this.ctx.fillStyle = p.color;
+            this.ctx.fillRect(p.x, p.y, p.sz, p.sz); // Ретро квадратные частицы
+        }
+        this.ctx.globalAlpha = 1;
+    }
+};
+
+// ==================== ПРОЦЕДУРНЫЙ МНОГОГОЛОСНЫЙ САУНДТРЕК ====================
+const Music = {
+    timer: null, tickIndex: 0, trackName: '',
+    notes: { A2:110, C3:130.8, E3:164.8, A3:220, C4:261.6, D4:293.7, E4:329.6, G4:392, A4:440 },
+    tracks: {
+        menu: { tempo: 380, bass: ['A2','A2','C3','E3'], lead: ['A3','C4','E4','G4','E4','C4','A3','E3'], type:'sine' },
+        explore: { tempo: 480, bass: ['C3','C3','E3','A2'], lead: ['E4','D4','C4','D4','E4','G4','A4','E4'], type:'triangle' },
+        battle: { tempo: 240, bass: ['A2','E3','A2','F3'], lead: ['A3','E4','D4','E4','F4','E4','D4','C4'], type:'sawtooth' }
+    },
+    play(name) {
+        if(this.trackName === name) return; this.trackName = name; clearInterval(this.timer);
+        if(!name || !AudioEngine.ctx) return; let t = this.tracks[name]; this.tickIndex = 0;
+        
+        this.timer = setInterval(() => {
+            let ctx = AudioEngine.ctx; let now = ctx.currentTime;
+            
+            // Басовая линия (Каждые два удара)
+            if(this.tickIndex % 2 === 0) {
+                let bn = t.bass[Math.floor(this.tickIndex / 2) % t.bass.length];
+                let o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'triangle';
+                o.frequency.setValueAtTime(this.notes[bn], now); g.gain.setValueAtTime(0.02, now);
+                g.gain.exponentialRampToValueAtTime(0.001, now + 0.4); o.connect(g); g.connect(ctx.destination);
+                o.start(now); o.stop(now + 0.4);
+            }
+            // Лидирующая мелодия арпеджио
+            let ln = t.lead[this.tickIndex % t.lead.length];
+            let oL = ctx.createOscillator(), gL = ctx.createGain(); oL.type = t.type;
+            oL.frequency.setValueAtTime(this.notes[ln], now); gL.gain.setValueAtTime(0.015, now);
+            gL.gain.exponentialRampToValueAtTime(0.001, now + 0.2); oL.connect(gL); gL.connect(ctx.destination);
+            oL.start(now); oL.stop(now + 0.2);
+
+            this.tickIndex++;
+        }, t.tempo);
+    }
+};
+
+// ==================== СЮЖЕТ И РЕЧЕВЫЕ КАТ-СЦЕНЫ ====================
+const Cutscene = {
+    lines: [], lineIdx: 0, charIdx: 0, timer: null,
+    chapters: [
+        { title: "Глава 1: Изумрудный Вход Монии", text: "Алукард подошел к священным рубежам. Зеленые Сады окутаны туманом Бездны. Сакура опадает на сталь клинка..." },
+        { title: "Глава 2: Токсичные Болота Ведьмы", text: "Сырость проникает под кожу. Фиолетовые болотные газы поднимаются вокруг. Будьте аккуратны, ловушки скрыты повсюду!" },
+        { title: "Глава 3: Морозная Ледяная Цитадель", text: "Снежная пиксельная буря бьет в лицо. Стены скованы льдом. Древние каменные големы проснулись от шагов Рассвета." },
+        { title: "Глава 4: Катакомбы Павших Королей", text: "Гробницы разграблены демонами. Здесь спрятаны сундуки легендарных реликвий. Ключи — твой единственный шанс выжить." },
+        { title: "Глава 5: Финал Тьмы", text: "Реки магмы текут вокруг трона. Тамуз ждет тебя в самом сердце Пекла. Империя Мония уповает на твою победу, Избранный!" }
+    ],
+    start(zoneIdx) {
+        Music.play('menu'); document.getElementById('story-title').textContent = this.chapters[zoneIdx].title;
+        this.lines = [ { s: "Рассказчик", t: this.chapters[zoneIdx].text }, { s: "Герой", t: "Я заставлю Бездну отступить и вернуть Рассвет Монии!" } ];
+        this.lineIdx = 0; UI.show('scr-story'); this.type();
+    },
+    type() {
+        let current = this.lines[this.lineIdx]; document.getElementById('story-speaker').textContent = current.s;
+        let box = document.getElementById('story-text'); box.textContent = ''; this.charIdx = 0; clearInterval(this.timer);
+        document.getElementById('story-next-btn').disabled = true;
+
+        this.timer = setInterval(() => {
+            if(this.charIdx < current.t.length) {
+                box.textContent += current.t.charAt(this.charIdx);
+                // Имитация голоса
+                if(this.charIdx % 2 === 0 && AudioEngine.ctx) {
+                    let freq = current.s === 'Рассказчик' ? 120 : 210;
+                    let o = AudioEngine.ctx.createOscillator(), g = AudioEngine.ctx.createGain(); o.type='sine';
+                    o.frequency.setValueAtTime(freq + Math.random()*15, AudioEngine.ctx.currentTime); g.gain.setValueAtTime(0.02, AudioEngine.ctx.currentTime);
+                    g.gain.linearRampToValueAtTime(0, AudioEngine.ctx.currentTime+0.04); o.connect(g); g.connect(AudioEngine.ctx.destination);
+                    o.start(); o.stop(AudioEngine.ctx.currentTime+0.04);
+                }
+                this.charIdx++;
+            } else { clearInterval(this.timer); document.getElementById('story-next-btn').disabled = false; }
+        }, 25);
+    },
+    next() {
+        this.lineIdx++;
+        if(this.lineIdx < this.lines.length) { this.type(); }
+        else { UI.show('scr-adv'); Music.play('explore'); Map.gen(); }
+    }
+};
+
+// ==================== ОСТАЛЬНЫЕ МЕХАНИКИ И БОЙ ====================
+const AudioEngine = {
     ctx: null,
     init() { if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
     play(type) {
         this.init(); if(!this.ctx) return;
-        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
-        o.connect(g); g.connect(this.ctx.destination);
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain(); o.connect(g); g.connect(this.ctx.destination);
         const t = this.ctx.currentTime;
-        if(type==='step') { o.type='triangle'; o.frequency.setValueAtTime(100, t); g.gain.setValueAtTime(0.05, t); g.gain.linearRampToValueAtTime(0, t+0.05); o.start(t); o.stop(t+0.05); }
-        else if(type==='hit') { o.type='sawtooth'; o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(40, t+0.1); g.gain.setValueAtTime(0.2, t); g.gain.linearRampToValueAtTime(0, t+0.1); o.start(t); o.stop(t+0.1); }
-        else if(type==='loot') { o.type='sine'; o.frequency.setValueAtTime(400, t); o.frequency.setValueAtTime(600, t+0.08); g.gain.setValueAtTime(0.15, t); g.gain.linearRampToValueAtTime(0, t+0.2); o.start(t); o.stop(t+0.2); }
-        else if(type==='ult') { o.type='square'; o.frequency.setValueAtTime(80, t); o.frequency.linearRampToValueAtTime(800, t+0.4); g.gain.setValueAtTime(0.3, t); g.gain.linearRampToValueAtTime(0, t+0.4); o.start(t); o.stop(t+0.4); }
+        if(type==='step') { o.type='triangle'; o.frequency.setValueAtTime(90, t); g.gain.setValueAtTime(0.05, t); g.gain.linearRampToValueAtTime(0, t+0.05); o.start(t); o.stop(t+0.05); }
+        else if(type==='hit') { o.type='sawtooth'; o.frequency.setValueAtTime(140, t); o.frequency.linearRampToValueAtTime(40, t+0.1); g.gain.setValueAtTime(0.15, t); g.gain.linearRampToValueAtTime(0, t+0.1); o.start(t); o.stop(t+0.1); }
+        else if(type==='loot') { o.type='sine'; o.frequency.setValueAtTime(440, t); o.frequency.setValueAtTime(660, t+0.08); g.gain.setValueAtTime(0.15, t); g.gain.linearRampToValueAtTime(0, t+0.2); o.start(t); o.stop(t+0.2); }
+        else if(type==='ult') { o.type='square'; o.frequency.setValueAtTime(100, t); o.frequency.linearRampToValueAtTime(800, t+0.4); g.gain.setValueAtTime(0.3, t); g.gain.linearRampToValueAtTime(0, t+0.4); o.start(t); o.stop(t+0.4); }
     }
 };
 
-// ==================== БАЗА ДАННЫХ ИГРЫ ====================
 const DB = {
     heroes: [
-        { id:'alu', n:'АЛУКАРД', spr:'⚔️', hp:320, dmg:45, def:15, desc:'Боец. Лечится на 25% от нанесенного врагу урона.' },
-        { id:'mia', n:'МИЯ', spr:'🏹', hp:220, dmg:55, def:8, desc:'Стрелок. Имеет 30% шанс нанести двойной критический урон.' },
-        { id:'tig', n:'ТИГРИЛ', spr:'🛡️', hp:450, dmg:30, def:30, desc:'Танк. Снижает весь получаемый урон на 5 единиц.' },
-        { id:'gus', n:'ГОССЕН', spr:'🗡️', hp:240, dmg:50, def:12, desc:'Убийца. Ультимейт наносит х1.5 урона, если у врага мало ОЗ.' },
+        { id:'alu', n:'АЛУКАРД', spr:'⚔️', hp:320, dmg:45, def:14, desc:'Боец. Пассивный вампиризм: возвращает 25% здоровья от ударов мечом.' },
+        { id:'mia', n:'МИЯ', spr:'🏹', hp:220, dmg:55, def:8, desc:'Стрелок. Шанс крита: 30% вероятность нанести х2 урон стрелой.' },
+        { id:'tig', n:'ТИГРИЛ', spr:'🛡️', hp:450, dmg:30, def:25, desc:'Танк. Бастион: Снижает весь получаемый урон на 5 единиц.' },
+        { id:'gus', n:'ГОССЕН', spr:'🗡️', hp:230, dmg:50, def:12, desc:'Убийца. Ультимейт наносит х1.5 урона, если у врага мало ОЗ.' },
         { id:'eud', n:'ЭЙДОРА', spr:'⚡', hp:200, dmg:65, def:10, desc:'Маг. Навыки наносят колоссальный магический урон.' },
         { id:'zil', n:'ЗИЛОНГ', spr:'🐉', hp:280, dmg:42, def:16, desc:'Воин. Шанс 20% атаковать дважды за один ход.' },
         { id:'fra', n:'ФРАНКО', spr:'🪝', hp:480, dmg:25, def:28, desc:'Танк. Генерирует усиленные щиты во время боя.' },
         { id:'sab', n:'САБЕР', spr:'🤺', hp:230, dmg:48, def:11, desc:'Ассасин. Атаки игнорируют 50% защиты противника.' }
     ],
     enemies: [
-        { n:"Миньон", spr:"👺", hp:120, dmg:20, def:5, xp:35, gld:20 },
-        { n:"Теневой Волк", spr:"🐺", hp:180, dmg:30, def:10, xp:50, gld:35 },
-        { n:"Голем Скал", spr:"🪨", hp:350, dmg:45, def:30, xp:90, gld:60 },
-        { n:"Демон Бездны", spr:"👹", hp:500, dmg:65, def:25, xp:150, gld:90 },
-        { n:"ЛОРД ТАМУЗ", spr:"🔥", hp:2000, dmg:100, def:50, xp:9999, gld:999, boss:true }
+        { n:"Миньон Бездны", spr:"👺", hp:110, dmg:16, def:6, xp:30, gld:20 },
+        { n:"Адский Волк", spr:"🐺", hp:150, dmg:22, def:10, xp:45, gld:30 },
+        { n:"Голем Скал", spr:"🪨", hp:320, dmg:34, def:25, xp:75, gld:55 },
+        { n:"Проклятый Рыцарь", spr:"💀", hp:400, dmg:45, def:20, xp:110, gld:75 },
+        { n:"ТАМУЗ [ГЕНЕРАЛ]", spr:"🔥", hp:1400, dmg:85, def:50, xp:999, gld:500, isBoss: true }
     ],
-    loot: {
-        w: { i:['🗡️','⚔️','🪓','🏹','🪄'], n:['Меч','Клинок','Топор','Лук','Посох'] },
-        a: { i:['👕','🥋','🦺','🛡️'], n:['Куртка','Кираса','Броня','Щит'] },
-        pref: ['Ржавый', 'Крепкий', 'Магический', 'Пылающий', 'Священный', 'Мифический'],
-        suf: ['Новичка', 'Солдата', 'Короля', 'Дракона', 'Бездны']
-    }
+    lootTable: [
+        { type:'w', name:'Меч Легиона', icon:' dagger 🗡️', stat:'dmg', v:12, rare:'common' },
+        { type:'w', name:'Клинок Отчаяния', icon:'⚔️', stat:'dmg', v:42, rare:'legend' },
+        { type:'a', name:'Кираса Воина', icon:'👕', stat:'def', v:10, rare:'common' },
+        { type:'a', name:'Бессмертие', icon:'🛡️', stat:'def', v:35, rare:'legend' }
+    ]
 };
 
-function genItem(bonusLvl) {
-    let type = Math.random() < 0.5 ? 'w' : 'a';
-    let base = DB.loot[type];
-    
-    let roll = Math.random() * 100;
-    let tier = 0; // 0-Common .. 5-Mythic
-    if (roll < 3 + bonusLvl*2) tier = 5;
-    else if (roll < 12 + bonusLvl*4) tier = 4;
-    else if (roll < 30 + bonusLvl*5) tier = 3;
-    else if (roll < 60) tier = 2;
-    else tier = 1;
-
-    let statVal = (tier+1) * 12 + Math.floor(Math.random()*25) + (Game.zIdx * 15);
-    let name = `${DB.loot.pref[Math.min(5, tier)]} ${base.n[Math.floor(Math.random()*base.n.length)]} ${tier>2 ? DB.loot.suf[Math.min(4, tier-2)] : ''}`;
-
-    return { t: type, n: name, i: base.i[Math.floor(Math.random()*base.i.length)], v: statVal, tr: tier, upg: 0 };
+function genItem(zoneLvl) {
+    let base = DB.lootTable[Math.floor(Math.random()*DB.lootTable.length)];
+    let modifier = 1 + Math.floor(Math.random()*5) + (zoneLvl * 6);
+    return { ...base, v: base.v + modifier, n: `Модерн. ${base.name}`, upg: 0 };
 }
 
-// ==================== СОСТОЯНИЕ ИГРЫ ====================
-let Game = {
-    hIdx: 0, zIdx: 0, p: null,
-    
-    initNew() {
-        Snd.init(); this.zIdx = 0; let h = DB.heroes[this.hIdx];
-        this.p = {
-            id: h.id, n: h.n, spr: h.spr, lvl: 1, xp: 0, nxp: 120, sp: 0,
-            bhp: h.hp, mhp: h.hp, hp: h.hp, bdmg: h.dmg, dmg: h.dmg, bdef: h.def, def: h.def,
-            gld: 200, dst: 30, keys: 2, picks: 5, eq: { w: null, a: null }, inv: []
-        };
-        Map.gen(); UI.show('scr-adv'); UI.updateAdv(); UI.toast("Акт I: Врата открыты!", "#0f0");
-    },
-    
-    cycleHero(d) { this.hIdx = (this.hIdx + d + DB.heroes.length) % DB.heroes.length; UI.updateHeroScreen(); Snd.play('step'); },
-    
-    calcStats() {
-        let p = this.p; p.mhp = p.bhp; p.dmg = p.bdmg; p.def = p.bdef;
-        if(p.eq.w) p.dmg += p.eq.w.v; if(p.eq.a) p.def += p.eq.a.v;
-        if(p.hp > p.mhp) p.hp = p.mhp;
-    },
-    
-    addStat(type) {
-        if(this.p.sp <= 0) return;
-        this.p.sp--;
-        if(type==='dmg') this.p.bdmg += 4;
-        if(type==='hp') { this.p.bhp += 35; this.p.hp += 35; }
-        this.calcStats(); Camp.open(); Snd.play('loot');
-    },
-
-    addXp(amt) {
-        this.p.xp += amt;
-        while(this.p.xp >= this.p.nxp) {
-            this.p.xp -= this.p.nxp; this.p.lvl++; this.p.sp += 2; this.p.nxp = Math.floor(this.p.nxp * 1.4);
-            this.p.bhp += 20; this.p.bdmg += 5; this.p.bdef += 2;
-            this.calcStats(); this.p.hp = this.p.mhp; Snd.play('ult');
-            UI.toast(`🌟 УРОВЕНЬ ПОВЫШЕН: ${this.p.lvl}!`, "#3f3");
-        }
-    },
-
-    saveAndExit() {
-        localStorage.setItem('mlbb_v16_save', JSON.stringify({ hIdx: this.hIdx, zIdx: this.zIdx, p: this.p, map: Map.getState() }));
-        UI.show('scr-menu'); UI.toast("Прогресс сохранен!", "#55f");
-    },
-    
-    load() {
-        let raw = localStorage.getItem('mlbb_v16_save');
-        if(!raw) return UI.toast("Нет сохранений!", "#f33");
-        let data = JSON.parse(raw);
-        this.hIdx = data.hIdx; this.zIdx = data.zIdx; this.p = data.p;
-        Map.setState(data.map); this.calcStats();
-        UI.show('scr-adv'); UI.updateAdv(); UI.toast("Игра загружена!", "#0f0");
-    }
-};
-
-// ==================== КАРТА (40x40) ====================
 const Map = {
-    w: 40, h: 40, grid: [], px: 1, py: 1, fog: [],
-    
+    w: 40, h: 40, grid: [], px: 5, py: 5, fog: [],
     getState() { return { g: this.grid, px: this.px, py: this.py, fog: this.fog }; },
     setState(s) { this.grid = s.g; this.px = s.px; this.py = s.py; this.fog = s.fog; this.draw(); },
-
     gen() {
         this.grid = Array(this.h).fill().map(() => Array(this.w).fill(1));
         let cx = 20, cy = 20; this.px = cx; this.py = cy; this.grid[cy][cx] = 0;
         
         for(let i=0; i<1000; i++) {
             let dir = [{x:0,y:1},{x:0,y:-1},{x:1,y:0},{x:-1,y:0}][Math.floor(Math.random()*4)];
-            if(cx+dir.x>1 && cx+dir.x<this.w-2 && cy+dir.y>1 && cy+dir.y<this.h-2) { cx += dir.x; cy += dir.y; this.grid[cy][cx] = 0; }
+            if(cx+dir.x>1 && cx+dir.x<this.w-2 && cy+dir.y>1 && cy+dir.y<this.h-2) { cx+=dir.x; cy+=dir.y; this.grid[cy][cx]=0; }
         }
-
         let floors = [];
-        for(let y=1; y<this.h-1; y++) for(let x=1; x<this.w-1; x++) if(this.grid[y][x] === 0 && (x!==this.px || y!==this.py)) floors.push({x,y});
+        for(let y=1; y<this.h-1; y++) for(let x=1; x<this.w-1; x++) if(this.grid[y][x]===0 && (x!==this.px || y!==this.py)) floors.push({x,y});
         floors.sort(() => Math.random() - 0.5);
 
-        if(floors.length > 0) this.grid[floors.pop().y][floors.pop().x] = Game.zIdx === 4 ? 6 : 5; // Босс или Выход
-        
-        let nE = 25 + Game.zIdx*5, nC = 15;
-        while(floors.length > 0 && nE-- > 0) this.grid[floors.pop().y][floors.pop().x] = 2; // Моб
-        while(floors.length > 0 && nC-- > 0) this.grid[floors.pop().y][floors.pop().x] = Math.random()<0.35 ? 8 : 4; // Ключ/Сундук
-        while(floors.length > 0 && Math.random()<0.05) this.grid[floors.pop().y][floors.pop().x] = 9; // Торговец
-        while(floors.length > 0 && Math.random()<0.05) this.grid[floors.pop().y][floors.pop().x] = 7; // Фонтан
+        if(floors.length > 0) this.grid[floors.pop().y][floors.pop().x] = Game.zIdx === 4 ? 6 : 5;
+        let nE = 20, nC = 12;
+        while(floors.length > 0 && nE-- > 0) this.grid[floors.pop().y][floors.pop().x] = 2;
+        while(floors.length > 0 && nC-- > 0) this.grid[floors.pop().y][floors.pop().x] = Math.random()<0.3 ? 8 : 4;
+        while(floors.length > 0 && Math.random()<0.04) this.grid[floors.pop().y][floors.pop().x] = 9;
+        while(floors.length > 0 && Math.random()<0.04) this.grid[floors.pop().y][floors.pop().x] = 7;
 
         this.fog = Array(this.h).fill().map(() => Array(this.w).fill(true));
         this.updateFog(); this.draw();
     },
-
     updateFog() {
         let r = 5;
-        for(let y = this.py-r; y <= this.py+r; y++) {
-            for(let x = this.px-r; x <= this.px+r; x++) {
+        for(let y=this.py-r; y<=this.py+r; y++) {
+            for(let x=this.px-r; x<=this.px+r; x++) {
                 if(y>=0 && y<this.h && x>=0 && x<this.w) { if((x-this.px)**2 + (y-this.py)**2 <= r**2) this.fog[y][x] = false; }
             }
         }
     },
-
     draw() {
         const cont = document.getElementById('map-container'); let html = '';
         for(let y=0; y<this.h; y++) {
@@ -450,7 +482,6 @@ const Map = {
                     else if(v===7) { txt = '⛲'; }
                     else if(v===8) { txt = '🗝️'; }
                     else if(v===9) { txt = '🛒'; }
-                    
                     if(Math.max(Math.abs(x-this.px), Math.abs(y-this.py)) >= 4) cls += ' dim';
                 }
                 html += `<div class="${cls}" onclick="Map.click(${x},${y})">${txt}</div>`;
@@ -458,51 +489,45 @@ const Map = {
             html += '</div>';
         }
         cont.innerHTML = html;
-        
         let ts = 40, vp = document.getElementById('viewport');
         let cx = (vp.clientWidth / 2) - (this.px * ts) - (ts/2);
         let cy = (vp.clientHeight / 2) - (this.py * ts) - (ts/2);
         cont.style.transform = `translate(${cx}px, ${cy}px)`;
     },
-
     click(x, y) {
         if(Math.abs(x-this.px)<=1 && Math.abs(y-this.py)<=1 && this.grid[y][x]===1 && Game.p.picks>0) {
-            Game.p.picks--; this.grid[y][x]=0; Snd.play('hit'); this.updateFog(); this.draw(); UI.updateAdv();
+            Game.p.picks--; this.grid[y][x] = 0; this.updateFog(); this.draw(); UI.updateAdv();
         }
     },
-
     move(dx, dy) {
         let nx = this.px + dx, ny = this.py + dy;
-        if(nx<0 || nx>=this.w || ny<0 || ny>=this.h) return;
-        let t = this.grid[ny][nx]; if(t === 1) return;
-
-        this.px = nx; this.py = ny; Snd.play('step'); this.updateFog();
-
-        if(t === 2) { this.grid[ny][nx]=0; return Combat.start(false); }
-        if(t === 6) { this.grid[ny][nx]=0; return Combat.start(true); }
+        if(nx<0 || nx>=this.w || ny<0 || ny>=this.h || this.grid[ny][nx]===1) return;
         
-        if(t === 4) {
+        this.px = nx; this.py = ny; AudioEngine.play('step'); this.updateFog();
+        let tile = this.grid[ny][nx];
+        
+        if(tile === 2) { this.grid[ny][nx]=0; return Combat.start(false); }
+        if(tile === 6) { this.grid[ny][nx]=0; return Combat.start(true); }
+        if(tile === 4) {
             if(Game.p.keys > 0) {
-                Game.p.keys--; this.grid[ny][nx]=0; Snd.play('loot');
-                let it = genItem(Game.zIdx); Game.p.inv.push(it); UI.toast(`Лут: ${it.n}!`, "var(--acc)");
-            } else { UI.toast("Нужен ключ! 🗝️", "#f33"); this.px-=dx; this.py-=dy; }
+                Game.p.keys--; this.grid[ny][nx]=0; AudioEngine.play('loot');
+                let it = generateItem(Game.zIdx); Game.p.inv.push(it); UI.toast(`Лут: ${it.n}!`, "var(--acc)");
+                Game.checkQuests('loot');
+            } else { UI.toast("Нужен ключ!", "#ff4444"); this.px-=dx; this.py-=dy; }
         }
-        else if(t === 8) { Game.p.keys++; this.grid[ny][nx]=0; Snd.play('loot'); UI.toast("Ключ найден! 🗝️"); }
-        else if(t === 7) { Game.p.hp=Game.p.mhp; this.grid[ny][nx]=0; Snd.play('skill'); UI.toast("Исцеление!", "#5f5"); }
-        else if(t === 9) { 
-            if(Game.p.gld>=120) { Game.p.gld-=120; this.grid[ny][nx]=0; let it = genItem(Game.zIdx+2); Game.p.inv.push(it); Snd.play('loot'); UI.toast(`Куплено: ${it.n}`, "var(--dust)"); }
-            else { UI.toast("Нужно 120 золота!", "#f33"); this.px-=dx; this.py-=dy; }
+        else if(tile === 8) { Game.p.keys++; this.grid[ny][nx]=0; AudioEngine.play('loot'); UI.toast("Подобран ключ!"); }
+        else if(tile === 7) { Game.p.hp=Game.p.mhp; this.grid[ny][nx]=0; AudioEngine.play('loot'); UI.toast("Исцеление у фонтана!", "#5f5"); }
+        else if(tile === 9) {
+            if(Game.p.gld >= 80) { Game.p.gld -= 80; this.grid[ny][nx]=0; let it = generateItem(Game.zIdx+1); Game.p.inv.push(it); UI.toast(`Куплено: ${it.n}`, "var(--dust)"); }
+            else { UI.toast("Не хватает золота (80💰)", "#ff4444"); this.px-=dx; this.py-=dy; }
         }
-        else if(t === 5) {
-            Game.zIdx++; Game.p.picks+=3; UI.toast(`Глубина ${Game.zIdx+1}!`, "var(--mana)");
-            this.gen(); Game.save(); return;
+        else if(tile === 5) {
+            Game.zIdx++; Game.p.picks += 2; UI.toast(`Спуск на уровень ${Game.zIdx+1}!`); Cutscene.start(Game.zIdx); return;
         }
-
         this.draw(); UI.updateAdv();
     }
 };
 
-// ==================== ЛАГЕРЬ ====================
 const Camp = {
     open() {
         Game.calcStats();
@@ -510,58 +535,43 @@ const Camp = {
         document.getElementById('c-xp-txt').textContent = `${Game.p.xp}/${Game.p.nxp}`; document.getElementById('c-exp-bar').style.width = `${(Game.p.xp/Game.p.nxp)*100}%`;
         document.getElementById('c-hp').textContent = `${Game.p.hp}/${Game.p.mhp}`; document.getElementById('c-dmg').textContent = Game.p.dmg;
         document.getElementById('c-def').textContent = Game.p.def; document.getElementById('c-sp').textContent = Game.p.sp;
-        document.getElementById('c-dust').textContent = Game.p.dust;
+        document.getElementById('c-dust').textContent = Game.p.dust; document.getElementById('c-inv-c').textContent = Game.p.inv.length;
 
-        ['w','a'].forEach(t => {
-            let el = document.getElementById(`eq-${t}`); let it = Game.p.eq[t];
-            el.className = `inv-slot t-${it ? it.tr : 0}`;
-            el.innerHTML = it ? `${it.i}<div class="inv-lvl">+${it.upg}</div>` : (t==='w'?'⚔️':'🛡️');
-        });
+        document.getElementById('eq-w').innerHTML = Game.p.eq.w ? `${Game.p.eq.w.icon} +${Game.p.eq.w.v}` : '⚔️ Оружие';
+        document.getElementById('eq-a').innerHTML = Game.p.eq.a ? `${Game.p.eq.a.icon} +${Game.p.eq.a.v}` : '🛡️ Доспех';
 
-        const invEl = document.getElementById('inventory-container'); invEl.innerHTML = '';
+        const container = document.getElementById('inventory-container'); container.innerHTML = '';
         Game.p.inv.forEach((it, i) => {
-            let slot = document.createElement('div'); slot.className = `inv-slot t-${it.tr}`;
-            slot.innerHTML = `${it.i}<div class="inv-lvl">+${it.upg}</div>`;
-            slot.onclick = () => this.showItem(i); invEl.appendChild(slot);
+            let slot = document.createElement('div'); slot.className = 'inv-slot';
+            slot.innerHTML = `${it.icon}<span style="font-size:5px;">+${it.v}</span>`;
+            slot.onclick = () => this.showItem(i); container.appendChild(slot);
         });
         UI.show('scr-camp');
     },
-
     showItem(idx) {
-        let it = Game.p.inv[idx]; let rNames = ['Обыч', 'Необыч', 'Редк', 'Эпик', 'Лега', 'МИФ']; let rCols = ['#888', '#5f5', '#55f', '#a3f', '#fa0', '#f33'];
+        let it = Game.p.inv[idx];
         let html = `
-            <h2 style="color:${rCols[it.tr]}; font-size:12px;">${it.i} ${it.n}</h2>
-            <p style="font-size:7px; color:#aaa;">${it.t==='w'?'Оружие':'Броня'} | ${rNames[it.tr]}</p>
-            <p style="font-size:14px; color:var(--acc); margin: 15px 0;">+${it.v} ${it.stat==='dmg'?'Атака':'Защита'}</p>
-            <div style="display:flex; flex-direction:column; gap:6px; margin-top:20px;">
-                <button class="btn" style="background:#141;" onclick="Camp.equip(${idx})">НАДЕТЬ</button>
-                <button class="btn" style="background:#414;" onclick="Camp.upgrade(${idx})">ТОЧИТЬ (15💎)</button>
-                <button class="btn" style="background:#411;" onclick="Camp.scrap(${idx})">РАЗОБРАТЬ (+${5 + it.tr*5}💎)</button>
-                <button class="btn" onclick="UI.closeModal()">ОТМЕНА</button>
-            </div>
+            <h2>${it.icon} ${it.n}</h2>
+            <p style="font-size:11px; color:var(--acc); margin:10px 0;">Модификатор силы: +${it.v}</p>
+            <button class="btn" style="background:#141;" onclick="Camp.equip(${idx})">НАДЕТЬ</button>
+            <button class="btn" style="background:#411;" onclick="Camp.scrap(${idx})">РАЗОБРАТЬ (+8💎)</button>
+            <button class="btn" onclick="UI.closeModal()">ОТМЕНА</button>
         `;
         UI.openModal(html);
     },
-
-    equip(idx) { UI.closeModal(); let it = Game.p.inv[idx]; if(Game.p.eq[it.t]) Game.p.inv.push(Game.p.eq[it.t]); Game.p.eq[it.t] = it; Game.p.inv.splice(idx, 1); Snd.play('step'); this.open(); UI.toast(`Надето: ${it.n}`); },
-    upgrade(idx) {
-        if(Game.p.dust < 15) return UI.toast("Мало Пыли!", "#f33");
-        Game.p.dust -= 15; let it = Game.p.inv[idx]; it.upg++; it.v += Math.floor(it.v * 0.15) + 4; 
-        UI.closeModal(); this.open(); UI.toast(`Заточка +${it.upg}!`, "var(--acc)"); Snd.play('skill');
-    },
-    uneq(t) { if(Game.p.eq[t]) { Game.p.inv.push(Game.p.eq[t]); Game.p.eq[t] = null; this.open(); } },
-    scrap(idx) { let it = Game.p.inv[idx]; let d = 5 + it.tr*5 + it.upg*3; Game.p.inv.splice(idx, 1); Game.p.dust += d; UI.closeModal(); this.open(); UI.toast(`Разобрано! +${d}💎`, "var(--dust)"); Snd.play('loot'); },
+    equip(idx) { UI.closeModal(); let it = Game.p.inv[idx]; if(Game.p.eq[it.type]) Game.p.inv.push(Game.p.eq[it.type]); Game.p.eq[it.type] = it; Game.p.inv.splice(idx,1); this.open(); UI.toast("Экипировано!"); },
+    scrap(idx) { Game.p.inv.splice(idx,1); Game.p.dust += 8; UI.closeModal(); this.open(); UI.toast("Разобрано! +8💎"); },
+    unequip(type) { if(Game.p.eq[type]) { Game.p.inv.push(Game.p.eq[type]); Game.p.eq[type] = null; this.open(); } },
     craft() {
-        if(Game.p.dust < 25) return UI.toast("Мало пыли!", "#f33");
-        Game.p.dust -= 25; let it = genItem(Game.p.lvl > 8 ? 2 : 0); Game.p.inv.push(it); this.open(); UI.toast(`Выковано: ${it.n}!`, "var(--acc)"); Snd.play('ult');
+        if(Game.p.dust < 25) return UI.toast("Мало пыли!", "#f44");
+        Game.p.dust -= 25; let it = generateItem(Game.zIdx); Game.p.inv.push(it); this.open(); UI.toast(`Выковано: ${it.n}`);
     },
     buyPotion() {
-        if(Game.p.gld < 50) return UI.toast("Мало золота!", "#f33");
-        Game.p.gld -= 50; Game.p.hp = Game.p.mhp; this.open(); UI.toast("ОЗ восстановлено!", "#5f5"); Snd.play('skill');
+        if(Game.p.gld < 25) return UI.toast("Не хватает золота!", "#f44");
+        Game.p.gld -= 25; Game.p.hp = Game.p.mhp; this.open(); UI.toast("ОЗ восполнено!", "#5f5");
     }
 };
 
-// ==================== БОЕВАЯ СИСТЕМА ====================
 const Combat = {
     e: null, isBoss: false,
     start(bossMode) {
@@ -569,12 +579,10 @@ const Combat = {
         let baseE = bossMode ? pool[4] : pool[Math.floor(Math.random()*4)];
         let scale = 1 + (Game.zIdx * 0.4);
         this.e = { ...baseE, maxHp: Math.floor(baseE.hp*scale), hp: Math.floor(baseE.hp*scale), dmg: Math.floor(baseE.dmg*scale), def: Math.floor(baseE.def*scale) };
+        Music.play('battle');
         
-        document.getElementById('b-pname').textContent = Game.p.n; document.getElementById('b-ename').textContent = `${this.e.n} [Ур.${Game.zIdx+1}]`;
-        document.getElementById('player-sprite').textContent = Game.p.spr; document.getElementById('enemy-sprite').textContent = this.e.spr;
-        document.getElementById('battle-log').innerHTML = '';
-        
-        UI.show('scr-battle'); this.log(`СХВАТКА! ${this.e.n} нападает!`, "var(--acc)");
+        document.getElementById('b-pname').textContent = Game.p.n; document.getElementById('b-ename').textContent = this.e.n;
+        document.getElementById('battle-log').innerHTML = ''; UI.show('scr-battle'); this.log(`Вы встретили врага: ${this.e.n}`);
         this.updateUI();
     },
     updateUI() {
@@ -587,102 +595,73 @@ const Combat = {
     },
     float(id, txt, c="#fff") {
         let el = document.getElementById(id); let f = document.createElement('div');
-        f.className = 'dmg-pop'; f.style.color = c; f.textContent = txt;
+        f.className = 'floating-text'; f.style.color = c; f.textContent = txt;
         f.style.left = (Math.random()*20+25)+'%'; el.parentElement.appendChild(f); setTimeout(()=>f.remove(), 1000);
     },
     log(m, c="#aaa") { let l = document.getElementById('battle-log'); l.innerHTML += `<div>> ${m}</div>`; l.scrollTop = l.scrollHeight; },
-    
-    act(type) {
-        let dmg = Game.p.dmg; this.anim('f-player', 'strikeL');
-        
+    action(type) {
+        let dmg = Game.p.dmg; this.anim('player-sprite', 'strikeL');
         if(type === 1) {
-            let isCrit = Math.random()*100 < (Game.p.id==='mia'?30:5);
-            if(isCrit) dmg = Math.floor(dmg * 2);
-            if(Game.p.id==='zil' && Math.random()<0.2) dmg = Math.floor(dmg * 1.8);
-            
+            let isCrit = Math.random()*100 < (Game.p.id==='mia'?30:5); if(isCrit) dmg *= 2;
             let final = Math.max(3, dmg - this.e.def); this.e.hp = Math.max(0, this.e.hp - final);
-            if(Game.p.id === 'alu') { let v=Math.floor(final*0.25); Game.p.hp=Math.min(Game.p.mhp, Game.p.hp+v); this.float('f-player', `+${v}`, "#2c2"); }
-            
-            this.float('f-enemy', isCrit?`КРИТ! ${final}`:`-${final}`, isCrit?"var(--acc)":"#fff"); this.log(`Атака: -${final} ОЗ.`); Snd.play(isCrit?'ult':'hit');
+            if(Game.p.id === 'alu') { let v = Math.floor(final*0.25); Game.p.hp = Math.min(Game.p.mhp, Game.p.hp+v); this.float('player-sprite', `+${v}`, "#2c2"); }
+            this.float('enemy-sprite', isCrit?`КРИТ! ${final}`:`-${final}`, isCrit?'var(--acc)':'#fff'); this.log(`Удар мечом: -${final} ОЗ врагу.`); AudioEngine.play('hit');
         } else if(type === 2) {
-            let final = Math.floor(dmg * 1.6); this.e.hp = Math.max(0, this.e.hp - final);
-            this.float('f-enemy', `-${final}!`, "var(--mana)"); this.log(`Скилл: -${final} ОЗ.`); Snd.play('skill');
+            let final = Math.floor(dmg * 1.8); this.e.hp = Math.max(0, this.e.hp - final);
+            this.float('enemy-sprite', `-${final}!`, "var(--mana)"); this.log(`Навык класса нанес ${final} урона.`); AudioEngine.play('hit');
         } else if(type === 3) {
-            let heal = Math.floor(Game.p.mhp * 0.2); Game.p.hp = Math.min(Game.p.mhp, Game.p.hp+heal);
-            this.float('f-player', `+${heal}`, "#5f5"); this.log(`Защита восстановила: +${heal} ОЗ.`); Snd.play('loot');
+            let shield = Math.floor(Game.p.mhp * 0.25); Game.p.hp = Math.min(Game.p.mhp, Game.p.hp + shield);
+            this.float('player-sprite', `+${shield}`, "#55ff55"); this.log(`Священный щит: +${shield} ОЗ.`); AudioEngine.play('loot');
         } else if(type === 4) {
-            let final = Math.floor(dmg * 3.5); if(Game.p.id==='gus' && this.e.hp < this.e.maxHp/2) final = Math.floor(final * 1.5);
-            this.e.hp = Math.max(0, this.e.hp - final);
-            this.float('f-enemy', `УЛЬТ! ${final}`, "var(--hp)"); this.log(`УЛЬТИМЕЙТ: -${final} ОЗ!`); Snd.play('ult');
+            let final = Math.floor(dmg * 3.5); this.e.hp = Math.max(0, this.e.hp - final);
+            this.float('enemy-sprite', `☄️ ${final}`, "var(--hp)"); this.log(`УЛЬТИМЕЙТ: -${final} ОЗ!`); AudioEngine.play('ult');
+            FX.addSparks(window.innerWidth/2, window.innerHeight/2, '#ff3333', 40);
         }
-
-        this.updateUI();
-        if(this.e.hp <= 0) return setTimeout(() => this.end(true), 400);
-        
-        // Отключение кнопок на время хода врага
-        for(let i=1;i<=4;i++) document.getElementById(`sk-${i}`).disabled = true;
-        setTimeout(() => this.enemyAct(), 600);
+        this.updateUI(); if(this.e.hp <= 0) return setTimeout(() => this.end(true), 400);
+        setTimeout(() => this.enemyAct(), 500);
     },
     enemyAct() {
-        if(this.e.hp <= 0 || Game.p.hp <= 0) return;
-        this.anim('f-enemy', 'strikeR');
-
-        let eDmg = Math.max(5, this.e.dmg - Game.p.def);
-        if(Game.p.id === 'tig') eDmg = Math.max(1, eDmg - 5);
-        if(Game.p.id === 'fra' && Math.random()<0.25) { eDmg = 0; this.log("Франко заблокировал удар!", "#5af"); this.float('f-player', "БЛОК", "#5af"); Snd.play('step'); }
-
-        if(eDmg > 0) {
-            Game.p.hp = Math.max(0, Game.p.hp - eDmg); this.float('f-player', `-${eDmg}`, "#f44"); this.log(`${this.e.n} атакует: -${eDmg} ОЗ.`, "#f44"); Snd.play('hit');
-        }
-        
-        this.updateUI();
-        for(let i=1;i<=4;i++) document.getElementById(`sk-${i}`).disabled = false;
-        if(Game.p.hp <= 0) return setTimeout(() => this.end(false), 400);
+        if(this.e.hp <= 0 || Game.p.hp <= 0) return; this.anim('enemy-sprite', 'strikeR');
+        let eDmg = Math.max(4, this.e.dmg - Game.p.def); if(Game.p.id === 'tig') eDmg = Math.max(1, eDmg - 5);
+        Game.p.hp = Math.max(0, Game.p.hp - eDmg); this.float('player-sprite', `-${eDmg}`, "#f44"); this.log(`${this.e.n} бьет: -${eDmg} ОЗ.`, "#f44"); AudioEngine.play('hit');
+        this.updateUI(); if(Game.p.hp <= 0) return setTimeout(() => this.end(false), 400);
     },
     end(win) {
         if(win) {
-            Game.p.gld += this.e.gld; Game.addXp(this.e.xp); UI.toast(`Победа! +${this.e.xp}XP, +${this.e.gld}💰`, "#ff5");
-            if(this.isBoss) { alert("🏆 ВЫ ЗАПЕЧАТАЛИ БЕЗДНУ! ИГРА ПРОЙДЕНА!"); Game.zIdx = 0; UI.show('scr-menu'); return; }
-            UI.show('scr-adv'); Map.draw();
-        } else { alert("💀 ГЕРОЙ МЕРТВ. Вы потеряли прогресс на этом этаже."); UI.show('scr-menu'); }
+            Game.p.gld += this.e.gld; Game.addXp(this.e.xp); UI.toast(`Победа! +${this.e.xp}XP, +${this.e.gld}💰`, "#ff5"); Game.checkQuests('kill');
+            if(this.isBoss) { alert("🏆 ВЫ СВЕРГЛИ ТАМУЗА И СПАСЛИ МОНИЮ!"); Game.zIdx = 0; UI.show('scr-menu'); return; }
+            UI.show('scr-adv'); Music.play('explore'); Map.draw();
+        } else { alert("💀 Герой мертв."); UI.show('scr-menu'); }
     }
 };
 
-// ==================== УПРАВЛЕНИЕ UI ====================
 const UI = {
-    show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); },
-    toast(m, c="#fff") {
-        let b = document.getElementById('toasts'), t = document.createElement('div');
-        t.className = 'toast'; t.style.borderColor = c; t.innerHTML = m;
-        b.appendChild(t); setTimeout(() => t.remove(), 2400);
-    },
-    openHeroSelect() { this.show('scr-hero-select'); this.updateHeroScreen(); },
-    updateHeroScreen() {
-        let h = DB.heroes[Game.hIdx]; document.getElementById('hero-show-sprite').textContent = h.spr;
-        document.getElementById('hero-show-info').innerHTML = `<b style="color:var(--acc);font-size:12px">${h.n}</b><br><br><span style="color:#aaa">${h.desc}</span><br><br>❤️ ОЗ: <span style="color:var(--hp)">${h.hp}</span><br>⚔️ Атака: <span style="color:var(--gold)">${h.dmg}</span><br>🛡️ Защита: <span style="color:var(--mana)">${h.def}</span>`;
-    },
+    show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); if(id==='scr-adv') { FX.currentZone = Game.zIdx; } },
+    toast(m, c="#fff") { let b = document.getElementById('toasts'), t = document.createElement('div'); t.className = 'toast'; t.style.borderColor = c; t.innerHTML = m; b.appendChild(t); setTimeout(() => t.remove(), 2400); },
+    openHeroSelect() { this.show('scr-hero'); this.updateHeroScreen(); },
+    updateHeroScreen() { let h = DB.heroes[Game.hIdx]; document.getElementById('hero-show-sprite').textContent = h.spr; document.getElementById('hero-show-info').innerHTML = `<b style="font-size:11px;color:var(--acc);">${h.n}</b><br><br>${h.desc}<br><br>❤️ ОЗ: ${h.hp} | ⚔️ Атака: ${h.dmg} | 🛡️ Защита: ${h.def}`; },
     updateAdv() {
         document.getElementById('a-hp').textContent = `${Game.p.hp}/${Game.p.mhp}`; document.getElementById('a-gld').textContent = Game.p.gld;
         document.getElementById('a-floor').textContent = `${Game.zIdx+1}/5`; document.getElementById('a-picks').textContent = Game.p.picks;
         document.getElementById('a-keys').textContent = Game.p.keys;
     },
-    openModal(html) { document.getElementById('modal-content').innerHTML = html; document.getElementById('modal').style.display = 'flex'; },
+    updateQuests() {
+        const list = document.getElementById('quest-list'); list.innerHTML = '';
+        Game.quests.forEach(q => { list.innerHTML += `<div style="margin-bottom:6px; color:${q.done?'#555':'#fff'}">${q.done?'✅':'📜'} <b>${q.name}</b> (${q.cur}/${q.max})<br><span style="color:var(--gold)">Награда: +${q.gld}💰</span></div>`; });
+    },
+    openModal(html) { document.getElementById('modal-body').innerHTML = html; document.getElementById('modal').style.display = 'flex'; },
     closeModal() { document.getElementById('modal').style.display = 'none'; },
-    fullscreen() { if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{}); else document.exitFullscreen(); }
+    toggleFullscreen() { if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{}); else document.exitFullscreen(); }
 };
 
-// Поддержка ПК клавиатуры для теста
-window.addEventListener('keydown', (e) => {
-    let k = e.key.toLowerCase();
-    if(document.getElementById('scr-adv').classList.contains('active')) {
-        if(k==='w' || k==='arrowup') Map.move(0,-1); if(k==='s' || k==='arrowdown') Map.move(0,1);
-        if(k==='a' || k==='arrowleft') Map.move(-1,0); if(k==='d' || k==='arrowright') Map.move(1,0);
-    } else if(document.getElementById('scr-battle').classList.contains('active')) {
-        if(k==='1') Combat.act(1); if(k==='2') Combat.act(2); if(k==='3') Combat.act(3); if(k==='4') Combat.act(4);
-    }
-});
+Game.start = function() {
+    AudioEngine.init(); this.zIdx = 0; let h = DB.heroes[this.hIdx];
+    this.p = { id: h.id, n: h.n, spr: h.spr, lvl: 1, xp: 0, nxp: 100, sp: 0, bhp: h.hp, mhp: h.hp, hp: h.hp, bdmg: h.dmg, dmg: h.dmg, bdef: h.def, def: h.def, gld: 150, dust: 20, keys: 1, picks: 3, eq: { w: null, a: null }, inv: [] };
+    this.quests = [ { id: 1, name: "Очистка ярусов Бездны", cur: 0, max: 3, type: "kill", gld: 60, done: false }, { id: 2, name: "Охотник за сундуками", cur: 0, max: 2, type: "loot", gld: 50, done: false } ];
+    Cutscene.start(0);
+};
 
-UI.updateHeroScreen();
+FX.init(); UI.updateHeroScreen();
 </script>
 </body>
 </html>
