@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0">
+
+<title>MLBB RPG Online</title>
+
+<link
+    rel="stylesheet"
+    href="/static/css/style.css">
+
+<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+
+</head>
+
+<body>
+
+<div id="loading">
+
+    <h1>MLBB RPG ONLINE</h1>
+
+    <p>Загрузка...</p>
+
+</div>
+
+<div id="loginScreen" class="hidden">
+
+    <div class="window">
+
+        <h1>MLBB RPG</h1>
+
+        <input
+            id="nickname"
+            maxlength="16"
+            placeholder="Введите ник">
+
+        <select id="hero">
+
+            <option value="alucard">
+                Алукард
+            </option>
+
+            <option value="miya">
+                Мия
+            </option>
+
+            <option value="tigreal">
+                Тигрил
+            </option>
+
+            <option value="eudora">
+                Эйдора
+            </option>
+
+        </select>
+
+        <button id="createBtn">
+            Создать героя
+        </button>
+
+        <button id="loginBtn">
+            Войти
+        </button>
+
+    </div>
+
+</div>
+
+<div id="game" class="hidden">
+
+<div id="topBar">
+
+<div id="playerInfo">
+
+<span id="playerName">
+Игрок
+</span>
+
+<span id="playerLevel">
+Lv.1
+</span>
+
+<span id="gold">
+150 золота
+</span>
+
+</div>
+
+<div id="fps">
+
+0 FPS
+
+</div>
+
+</div>
+
+<canvas
+    id="gameCanvas"
+    width="1280"
+    height="720">
+</canvas>
+
+<div id="leftPanel">
+
+<h2>
+
+Персонаж
+
+</h2>
+
+<div>
+
+❤️
+
+<span id="hp">
+
+100
+
+</span>
+
+/
+
+<span id="maxHp">
+
+100
+
+</span>
+
+</div>
+
+<div>
+
+🔵
+
+<span id="mana">
+
+50
+
+</span>
+
+/
+
+<span id="maxMana">
+
+50
+
+</span>
+
+</div>
+
+<div>
+
+⚔
+
+<span id="attack">
+
+20
+
+</span>
+
+</div>
+
+<div>
+
+🛡
+
+<span id="defense">
+
+10
+
+</span>
+
+</div>
+
+<div>
+
+⭐
+
+<span id="xp">
+
+0
+
+</span>
+
+</div>
+
+</div>
+
+<div id="rightPanel">
+
+<h2>
+
+Миникарта
+
+</h2>
+
+<canvas
+    id="minimap"
+    width="220"
+    height="220">
+</canvas>
+
+</div>
+
+<div id="bottomBar">
+
+<button id="inventoryBtn">
+
+🎒 Инвентарь
+
+</button>
+
+<button id="questsBtn">
+
+📜 Квесты
+
+</button>
+
+<button id="skillsBtn">
+
+⚡ Навыки
+
+</button>
+
+<button id="mapBtn">
+
+🗺 Карта
+
+</button>
+
+<button id="settingsBtn">
+
+⚙ Настройки
+
+</button>
+
+</div>
+
+<div id="chatPanel">
+
+    <div id="chatMessages">
+
+    </div>
+
+    <div id="chatInputBox">
+
+        <input
+            id="chatInput"
+            maxlength="200"
+            placeholder="Введите сообщение...">
+
+        <button id="sendChat">
+
+            ➤
+
+        </button>
+
+    </div>
+
+</div>
+
+<div id="inventoryWindow" class="window hidden">
+
+    <h2>Инвентарь</h2>
+
+    <div id="inventoryGrid">
+
+    </div>
+
+    <button class="closeWindow">
+
+        Закрыть
+
+    </button>
+
+</div>
+
+<div id="equipmentWindow" class="window hidden">
+
+    <h2>Экипировка</h2>
+
+    <div id="equipmentGrid">
+
+        <div id="helmetSlot">🪖 Шлем</div>
+
+        <div id="armorSlot">🛡 Броня</div>
+
+        <div id="weaponSlot">⚔ Оружие</div>
+
+        <div id="bootsSlot">🥾 Сапоги</div>
+
+        <div id="ringSlot">💍 Кольцо</div>
+
+        <div id="amuletSlot">📿 Амулет</div>
+
+    </div>
+
+    <button class="closeWindow">
+
+        Закрыть
+
+    </button>
+
+</div>
+
+<div id="questWindow" class="window hidden">
+
+    <h2>Квесты</h2>
+
+    <div id="questList">
+
+    </div>
+
+    <button class="closeWindow">
+
+        Закрыть
+
+    </button>
+
+</div>
+
+<div id="statsWindow" class="window hidden">
+
+    <h2>Характеристики</h2>
+
+    <table>
+
+        <tr>
+
+            <td>Уровень</td>
+
+            <td id="statLevel">1</td>
+
+        </tr>
+
+        <tr>
+
+            <td>HP</td>
+
+            <td id="statHP">100</td>
+
+        </tr>
+
+        <tr>
+
+            <td>MP</td>
+
+            <td id="statMana">50</td>
+
+        </tr>
+
+        <tr>
+
+            <td>Атака</td>
+
+            <td id="statAttack">20</td>
+
+        </tr>
+
+        <tr>
+
+            <td>Защита</td>
+
+            <td id="statDefense">10</td>
+
+        </tr>
+
+        <tr>
+
+            <td>Золото</td>
+
+            <td id="statGold">150</td>
+
+        </tr>
+
+    </table>
+
+    <button class="closeWindow">
+
+        Закрыть
+
+    </button>
+
+</div>
+
+<div id="battleWindow" class="window hidden">
+
+    <h2 id="enemyName">
+
+        Монстр
+
+    </h2>
+
+    <div id="enemyHP">
+
+        HP: 100
+
+    </div>
+
+    <div id="battleLog">
+
+    </div>
+
+    <div id="battleButtons">
+
+        <button id="attackBtn">
+
+            ⚔ Атаковать
+
+        </button>
+
+        <button id="skillBtn">
+
+            ✨ Навык
+
+        </button>
+
+        <button id="itemBtn">
+
+            🧪 Предмет
+
+        </button>
+
+        <button id="runBtn">
+
+            🏃 Побег
+
+        </button>
+
+    </div>
+
+</div>
+
+<script src="/static/js/main.js"></script>
+<script src="/static/js/ui.js"></script>
+<script src="/static/js/game.js"></script>
+<script src="/static/js/map.js"></script>
+<script src="/static/js/combat.js"></script>
+<script src="/static/js/inventory.js"></script>
+<script src="/static/js/online.js"></script>
+
+</body>
+
+  </html>
